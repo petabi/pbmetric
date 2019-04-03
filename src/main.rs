@@ -1,3 +1,7 @@
+use clap::{crate_version, App};
+
 fn main() {
-    println!("Hello, world!");
+    let _matches = App::new("pbmetric")
+        .version(&crate_version!()[..])
+        .get_matches();
 }
