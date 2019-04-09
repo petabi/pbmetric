@@ -7,5 +7,6 @@ edition = "2018"
 [dependencies]
 clap = "2"
 directories = "1.0"
+gitlab = "0.1104"
 serde = { version = "1.0",  features = ["derive"] }
 toml = "0.5"
