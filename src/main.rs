@@ -7,9 +7,9 @@ use std::io::prelude::*;
 use std::path::{Path, PathBuf};
 use std::process::exit;
 
-const QUALIFIER: &'static str = "com";
-const ORGANIZATION: &'static str = "Petabi";
-const APPLICATION: &'static str = env!("CARGO_PKG_NAME");
+const QUALIFIER: &str = "com";
+const ORGANIZATION: &str = "Petabi";
+const APPLICATION: &str = env!("CARGO_PKG_NAME");
 
 #[derive(Default, Deserialize)]
 struct Config {}
