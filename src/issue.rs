@@ -3,7 +3,7 @@ use chrono::{DateTime, Duration, Utc};
 use gitlab::{Gitlab, Issue, Milestone, Project, ProjectId};
 use maplit::btreemap;
 use std::cmp::Ordering;
-use std::collections::HashMap;
+use std::collections::{BTreeMap, HashMap};
 
 pub fn agenda<S: ToString>(token: S, project_ids: &[u64]) -> gitlab::Result<()> {
     let api = Gitlab::new("gitlab.com", token)?;
@@ -19,20 +19,37 @@ pub fn agenda<S: ToString>(token: S, project_ids: &[u64]) -> gitlab::Result<()> 
     let since = Utc::now() - Duration::weeks(1);
     let issues = issues_updated_recently(&api, &since, project_ids)?;
     let mut created_count = 0usize;
+    let mut authors = BTreeMap::new();
     let mut closed_count = 0usize;
+    let mut assignees = BTreeMap::new();
     for issue in issues {
         if since < issue.created_at {
+            let entry = authors
+                .entry(issue.author.username.clone())
+                .or_insert(0usize);
+            *entry += 1;
             created_count += 1;
         }
         if let Some(closed_at) = issue.closed_at {
             if since < closed_at {
+                if let Some(username) = assignee_username(&issue) {
+                    let entry = assignees.entry(username.to_string()).or_insert(0usize);
+                    *entry += 1;
+                }
                 closed_count += 1;
             }
         }
     }
     print!("\n## Changes in the Past Week\n\n");
     println!("* Created: {}", created_count);
+    for (username, count) in authors {
+        println!("  - {}: {}", username, count);
+    }
+    println!();
     println!("* Completed: {}", closed_count);
+    for (username, count) in assignees {
+        println!("  - {}: {}", username, count);
+    }
     Ok(())
 }
 
