@@ -37,6 +37,9 @@ fn next_issues(
             }
             None => continue,
         };
+        if issue.labels.contains(&"blocked".to_string()) {
+            continue;
+        }
         let project = if let Some(project) = projects.get(&issue.project_id) {
             project
         } else {
@@ -63,6 +66,9 @@ fn abandoned_issues(
     let params = HashMap::<&str, &str>::new();
     for issue in issues {
         if issue.updated_at > chrono::Utc::now() - chrono::Duration::weeks(1) {
+            continue;
+        }
+        if issue.labels.contains(&"blocked".to_string()) {
             continue;
         }
         let assignee = match &issue.assignees {
