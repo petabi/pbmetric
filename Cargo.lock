@@ -310,7 +310,7 @@ dependencies = [
 [[package]]
 name = "gitlab"
 version = "0.1104.1"
-source = "git+https://gitlab.kitware.com/utils/rust-gitlab#5519edf4dd9aeeb05bf0975587d892189d8d5cad"
+source = "git+https://gitlab.kitware.com/msk/rust-gitlab?branch=id-hash#4431b77586c09727dec4cad2b50c9778c4beac1d"
 dependencies = [
  "chrono 0.4.6 (registry+https://github.com/rust-lang/crates.io-index)",
  "error-chain 0.10.0 (registry+https://github.com/rust-lang/crates.io-index)",
@@ -670,9 +670,10 @@ dependencies = [
 name = "pbmetric"
 version = "0.1.0"
 dependencies = [
+ "chrono 0.4.6 (registry+https://github.com/rust-lang/crates.io-index)",
  "clap 2.32.0 (registry+https://github.com/rust-lang/crates.io-index)",
  "directories 1.0.2 (registry+https://github.com/rust-lang/crates.io-index)",
- "gitlab 0.1104.1 (git+https://gitlab.kitware.com/utils/rust-gitlab)",
+ "gitlab 0.1104.1 (git+https://gitlab.kitware.com/msk/rust-gitlab?branch=id-hash)",
  "maplit 1.0.1 (registry+https://github.com/rust-lang/crates.io-index)",
  "serde 1.0.90 (registry+https://github.com/rust-lang/crates.io-index)",
  "toml 0.5.0 (registry+https://github.com/rust-lang/crates.io-index)",
@@ -1377,7 +1378,7 @@ dependencies = [
 "checksum fuchsia-zircon-sys 0.3.3 (registry+https://github.com/rust-lang/crates.io-index)" = "3dcaa9ae7725d12cdb85b3ad99a434db70b468c09ded17e012d86b5c1010f7a7"
 "checksum futures 0.1.26 (registry+https://github.com/rust-lang/crates.io-index)" = "62941eff9507c8177d448bd83a44d9b9760856e184081d8cd79ba9f03dd24981"
 "checksum futures-cpupool 0.1.8 (registry+https://github.com/rust-lang/crates.io-index)" = "ab90cde24b3319636588d0c35fe03b1333857621051837ed769faefb4c2162e4"
-"checksum gitlab 0.1104.1 (git+https://gitlab.kitware.com/utils/rust-gitlab)" = "<none>"
+"checksum gitlab 0.1104.1 (git+https://gitlab.kitware.com/msk/rust-gitlab?branch=id-hash)" = "<none>"
 "checksum h2 0.1.17 (registry+https://github.com/rust-lang/crates.io-index)" = "910a5e7be6283a9c91b3982fa5188368c8719cce2a3cf3b86048673bf9d9c36b"
 "checksum http 0.1.17 (registry+https://github.com/rust-lang/crates.io-index)" = "eed324f0f0daf6ec10c474f150505af2c143f251722bf9dbd1261bd1f2ee2c1a"
 "checksum httparse 1.3.3 (registry+https://github.com/rust-lang/crates.io-index)" = "e8734b0cfd3bc3e101ec59100e101c2eecd19282202e87808b3037b442777a83"
