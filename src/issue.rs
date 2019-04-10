@@ -1,7 +1,8 @@
 use gitlab::{Gitlab, Issue, ProjectId};
+use maplit::btreemap;
 
 pub fn agenda<S: ToString>(token: S, project_ids: &[u64]) -> gitlab::Result<()> {
-    let issues = issues_all(token, project_ids)?;
+    let issues = issues_opened(token, project_ids)?;
     print!("## Issues with Milestone\n\n");
     for issue in issues {
         let _milestone = match issue.milestone {
@@ -13,11 +14,12 @@ pub fn agenda<S: ToString>(token: S, project_ids: &[u64]) -> gitlab::Result<()> 
     Ok(())
 }
 
-fn issues_all<S: ToString>(token: S, project_ids: &[u64]) -> gitlab::Result<Vec<Issue>> {
+fn issues_opened<S: ToString>(token: S, project_ids: &[u64]) -> gitlab::Result<Vec<Issue>> {
     let api = Gitlab::new("gitlab.com", token)?;
+    let params = btreemap! { "state" => "opened" };
     let mut issues = Vec::new();
     for id in project_ids {
-        issues.extend(api.issues(ProjectId::new(*id))?);
+        issues.extend(api.issues(ProjectId::new(*id), &params)?);
     }
     Ok(issues)
 }
