@@ -1,5 +1,5 @@
 use chrono::naive::NaiveDate;
-use gitlab::{Gitlab, Issue, Milestone, ProjectId};
+use gitlab::{Gitlab, Issue, Milestone, Project, ProjectId};
 use maplit::btreemap;
 use std::cmp::Ordering;
 use std::collections::HashMap;
@@ -8,12 +8,24 @@ pub fn agenda<S: ToString>(token: S, project_ids: &[u64]) -> gitlab::Result<()> 
     let api = Gitlab::new("gitlab.com", token)?;
     let mut issues = issues_opened(&api, project_ids)?;
     issues.sort_by(issue_due_cmp);
-    print!("## Next Milestone\n\n");
     let mut projects = HashMap::new();
+    if let Err(e) = next_issues(&api, &issues, &mut projects) {
+        return Err(e);
+    }
+    println!();
+    abandoned_issues(&api, &issues, &mut projects)
+}
+
+fn next_issues(
+    api: &Gitlab,
+    issues: &[Issue],
+    projects: &mut HashMap<ProjectId, Project>,
+) -> gitlab::Result<()> {
+    print!("## Next Milestone\n\n");
     let params = HashMap::<&str, &str>::new();
-    let mut cur_milestone: Option<Milestone> = None;
+    let mut cur_milestone: Option<&Milestone> = None;
     for issue in issues {
-        match issue.milestone {
+        match &issue.milestone {
             Some(milestone) => {
                 if let Some(cur) = &cur_milestone {
                     if cur.id != milestone.id {
@@ -32,12 +44,47 @@ pub fn agenda<S: ToString>(token: S, project_ids: &[u64]) -> gitlab::Result<()> 
             &projects[&issue.project_id]
         };
         print!("* {}#{} {}", project.path, issue.iid, issue.title);
-        if let Some(assignees) = issue.assignees {
+        if let Some(assignees) = &issue.assignees {
             for assignee in assignees {
                 print!(" @{}", assignee.username);
             }
         }
         println!();
+    }
+    Ok(())
+}
+
+fn abandoned_issues(
+    api: &Gitlab,
+    issues: &[Issue],
+    projects: &mut HashMap<ProjectId, Project>,
+) -> gitlab::Result<()> {
+    print!("## Assigned Issues with No Recent Activity\n\n");
+    let params = HashMap::<&str, &str>::new();
+    for issue in issues {
+        if issue.updated_at > chrono::Utc::now() - chrono::Duration::weeks(1) {
+            continue;
+        }
+        let assignee = match &issue.assignees {
+            Some(assignees) => {
+                if let Some(assignee) = assignees.first() {
+                    &assignee.username
+                } else {
+                    continue;
+                }
+            }
+            None => continue,
+        };
+        let project = if let Some(project) = projects.get(&issue.project_id) {
+            project
+        } else {
+            projects.insert(issue.project_id, api.project(issue.project_id, &params)?);
+            &projects[&issue.project_id]
+        };
+        println!(
+            "* {}#{} {} @{}",
+            project.path, issue.iid, issue.title, assignee
+        );
     }
     Ok(())
 }
