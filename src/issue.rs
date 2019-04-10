@@ -67,12 +67,10 @@ fn next_issues(
             &projects[&issue.project_id]
         };
         print!("* {}#{} {}", project.path, issue.iid, issue.title);
-        if let Some(assignees) = &issue.assignees {
-            for assignee in assignees {
-                print!(" @{}", assignee.username);
-            }
+        if let Some(username) = assignee_username(issue) {
+            print!(" @{}", username);
         }
-        println!();
+        println!()
     }
     Ok(())
 }
@@ -91,15 +89,10 @@ fn abandoned_issues(
         if issue.labels.contains(&"blocked".to_string()) {
             continue;
         }
-        let assignee = match &issue.assignees {
-            Some(assignees) => {
-                if let Some(assignee) = assignees.first() {
-                    &assignee.username
-                } else {
-                    continue;
-                }
-            }
-            None => continue,
+        let assignee = if let Some(username) = assignee_username(issue) {
+            username
+        } else {
+            continue;
         };
         let project = if let Some(project) = projects.get(&issue.project_id) {
             project
@@ -113,6 +106,19 @@ fn abandoned_issues(
         );
     }
     Ok(())
+}
+
+fn assignee_username(issue: &Issue) -> Option<&str> {
+    if let Some(assignees) = &issue.assignees {
+        // GitLab CE allows one assignee only.DateTime
+        if let Some(assignee) = assignees.first() {
+            Some(&assignee.username)
+        } else {
+            None
+        }
+    } else {
+        None
+    }
 }
 
 fn issues_opened(api: &Gitlab, project_ids: &[u64]) -> gitlab::Result<Vec<Issue>> {
