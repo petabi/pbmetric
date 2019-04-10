@@ -1,4 +1,5 @@
 use chrono::naive::NaiveDate;
+use chrono::{DateTime, Duration, Utc};
 use gitlab::{Gitlab, Issue, Milestone, Project, ProjectId};
 use maplit::btreemap;
 use std::cmp::Ordering;
@@ -13,7 +14,26 @@ pub fn agenda<S: ToString>(token: S, project_ids: &[u64]) -> gitlab::Result<()> 
         return Err(e);
     }
     println!();
-    abandoned_issues(&api, &issues, &mut projects)
+    abandoned_issues(&api, &issues, &mut projects)?;
+
+    let since = Utc::now() - Duration::weeks(1);
+    let issues = issues_updated_recently(&api, &since, project_ids)?;
+    let mut created_count = 0usize;
+    let mut closed_count = 0usize;
+    for issue in issues {
+        if since < issue.created_at {
+            created_count += 1;
+        }
+        if let Some(closed_at) = issue.closed_at {
+            if since < closed_at {
+                closed_count += 1;
+            }
+        }
+    }
+    print!("\n## Changes in the Past Week\n\n");
+    println!("* Created: {}", created_count);
+    println!("* Completed: {}", closed_count);
+    Ok(())
 }
 
 fn next_issues(
@@ -65,7 +85,7 @@ fn abandoned_issues(
     print!("## Assigned Issues with No Recent Activity\n\n");
     let params = HashMap::<&str, &str>::new();
     for issue in issues {
-        if issue.updated_at > chrono::Utc::now() - chrono::Duration::weeks(1) {
+        if issue.updated_at > Utc::now() - Duration::weeks(1) {
             continue;
         }
         if issue.labels.contains(&"blocked".to_string()) {
@@ -97,6 +117,19 @@ fn abandoned_issues(
 
 fn issues_opened(api: &Gitlab, project_ids: &[u64]) -> gitlab::Result<Vec<Issue>> {
     let params = btreemap! { "state" => "opened" };
+    let mut issues = Vec::new();
+    for id in project_ids {
+        issues.extend(api.issues(ProjectId::new(*id), &params)?);
+    }
+    Ok(issues)
+}
+
+fn issues_updated_recently(
+    api: &Gitlab,
+    since: &DateTime<Utc>,
+    project_ids: &[u64],
+) -> gitlab::Result<Vec<Issue>> {
+    let params = btreemap! {"updated_after" => since.to_string() };
     let mut issues = Vec::new();
     for id in project_ids {
         issues.extend(api.issues(ProjectId::new(*id), &params)?);
