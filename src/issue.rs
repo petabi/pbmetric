@@ -61,12 +61,22 @@ pub fn agenda<S: ToString>(token: S, project_ids: &[u64]) -> gitlab::Result<()> 
     }
     print!("\n## Changes in the Past Week\n\n");
     println!("* Created: {}", created_count);
-    for (username, count) in authors {
+    let mut authors = authors
+        .iter()
+        .map(|(username, count)| (*count, username))
+        .collect::<Vec<(usize, &String)>>();
+    authors.sort();
+    for (count, username) in authors.iter().rev() {
         println!("  - {}: {}", username, count);
     }
     println!();
     println!("* Completed: {}", closed_count);
-    for (username, count) in assignees {
+    let mut assignees = assignees
+        .iter()
+        .map(|(username, count)| (*count, username))
+        .collect::<Vec<(usize, &String)>>();
+    assignees.sort();
+    for (count, username) in assignees.iter().rev() {
         println!("  - {}: {}", username, count);
     }
     Ok(())
