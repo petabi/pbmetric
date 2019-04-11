@@ -223,7 +223,7 @@ fn issue_due_date(issue: &Issue) -> Option<NaiveDate> {
 }
 
 fn merge_requests_opened(api: &Gitlab, project_ids: &[u64]) -> gitlab::Result<Vec<MergeRequest>> {
-    let params = btreemap! { "state" => "opened" };
+    let params = btreemap! { "state" => "opened", "wip" => "no" };
     let mut merge_requests = Vec::new();
     for id in project_ids {
         merge_requests.extend(api.merge_requests(ProjectId::new(*id), &params)?);
