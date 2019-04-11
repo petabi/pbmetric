@@ -1,19 +1,38 @@
 use chrono::naive::NaiveDate;
 use chrono::{DateTime, Duration, Utc};
-use gitlab::{Gitlab, Issue, Milestone, Project, ProjectId};
+use gitlab::{Gitlab, Issue, MergeRequest, Milestone, Project, ProjectId};
 use maplit::btreemap;
 use std::cmp::Ordering;
 use std::collections::{BTreeMap, HashMap};
 
 pub fn agenda<S: ToString>(token: S, project_ids: &[u64]) -> gitlab::Result<()> {
     let api = Gitlab::new("gitlab.com", token)?;
+    let mut projects = HashMap::new();
+
+    let merge_requests = merge_requests_opened(&api, project_ids)?;
+    if !merge_requests.is_empty() {
+        print!("\n## Merge Requests Under Review\n\n");
+        for mr in merge_requests {
+            let project = if let Some(project) = projects.get(&mr.project_id) {
+                project
+            } else {
+                let params = HashMap::<&str, &str>::new();
+                projects.insert(mr.project_id, api.project(mr.project_id, &params)?);
+                &projects[&mr.project_id]
+            };
+            print!("* {}!{} {}", project.path, mr.iid, mr.title);
+            if let Some(assignee) = &mr.assignee {
+                print!(" @{}", assignee.username);
+            }
+            println!();
+        }
+    }
+
     let mut issues = issues_opened(&api, project_ids)?;
     issues.sort_by(issue_due_cmp);
-    let mut projects = HashMap::new();
     if let Err(e) = next_issues(&api, &issues, &mut projects) {
         return Err(e);
     }
-    println!();
     abandoned_issues(&api, &issues, &mut projects)?;
 
     let since = Utc::now() - Duration::weeks(1);
@@ -58,7 +77,7 @@ fn next_issues(
     issues: &[Issue],
     projects: &mut HashMap<ProjectId, Project>,
 ) -> gitlab::Result<()> {
-    print!("## Next Milestone\n\n");
+    print!("\n## Next Milestone\n\n");
     let params = HashMap::<&str, &str>::new();
     let mut cur_milestone: Option<&Milestone> = None;
     for issue in issues {
@@ -97,7 +116,7 @@ fn abandoned_issues(
     issues: &[Issue],
     projects: &mut HashMap<ProjectId, Project>,
 ) -> gitlab::Result<()> {
-    print!("## Assigned Issues with No Recent Activity\n\n");
+    print!("\n## Assigned Issues with No Recent Activity\n\n");
     let params = HashMap::<&str, &str>::new();
     for issue in issues {
         if issue.updated_at > Utc::now() - Duration::weeks(1) {
@@ -191,4 +210,13 @@ fn issue_due_date(issue: &Issue) -> Option<NaiveDate> {
     } else {
         None
     }
+}
+
+fn merge_requests_opened(api: &Gitlab, project_ids: &[u64]) -> gitlab::Result<Vec<MergeRequest>> {
+    let params = btreemap! { "state" => "opened" };
+    let mut merge_requests = Vec::new();
+    for id in project_ids {
+        merge_requests.extend(api.merge_requests(ProjectId::new(*id), &params)?);
+    }
+    Ok(merge_requests)
 }
