@@ -1,6 +1,6 @@
 use chrono::naive::NaiveDate;
 use chrono::{DateTime, Duration, Utc};
-use gitlab::{Gitlab, Issue, MergeRequest, Milestone, Project, ProjectId};
+use gitlab::{Gitlab, Issue, MergeRequest, Project, ProjectId};
 use maplit::btreemap;
 use std::cmp::Ordering;
 use std::collections::{BTreeMap, HashMap};
@@ -30,10 +30,7 @@ pub fn agenda<S: ToString>(token: S, project_ids: &[u64]) -> gitlab::Result<()> 
 
     let mut issues = issues_opened(&api, project_ids)?;
     issues.sort_by(issue_due_cmp);
-    if let Err(e) = next_issues(&api, &issues, &mut projects) {
-        return Err(e);
-    }
-    abandoned_issues(&api, &issues, &mut projects)?;
+    stale_issues(&api, &issues, &mut projects)?;
 
     let since = Utc::now() - Duration::weeks(1);
     let issues = issues_updated_recently(&api, &since, project_ids)?;
@@ -82,54 +79,15 @@ pub fn agenda<S: ToString>(token: S, project_ids: &[u64]) -> gitlab::Result<()> 
     Ok(())
 }
 
-fn next_issues(
+fn stale_issues(
     api: &Gitlab,
     issues: &[Issue],
     projects: &mut HashMap<ProjectId, Project>,
 ) -> gitlab::Result<()> {
-    print!("\n## Next Milestone\n\n");
-    let params = HashMap::<&str, &str>::new();
-    let mut cur_milestone: Option<&Milestone> = None;
-    for issue in issues {
-        match &issue.milestone {
-            Some(milestone) => {
-                if let Some(cur) = &cur_milestone {
-                    if cur.id != milestone.id {
-                        break;
-                    }
-                } else {
-                    cur_milestone = Some(milestone);
-                }
-            }
-            None => continue,
-        };
-        if issue.labels.contains(&"blocked".to_string()) {
-            continue;
-        }
-        let project = if let Some(project) = projects.get(&issue.project_id) {
-            project
-        } else {
-            projects.insert(issue.project_id, api.project(issue.project_id, &params)?);
-            &projects[&issue.project_id]
-        };
-        print!("* {}#{} {}", project.path, issue.iid, issue.title);
-        if let Some(username) = assignee_username(issue) {
-            print!(" @{}", username);
-        }
-        println!()
-    }
-    Ok(())
-}
-
-fn abandoned_issues(
-    api: &Gitlab,
-    issues: &[Issue],
-    projects: &mut HashMap<ProjectId, Project>,
-) -> gitlab::Result<()> {
-    print!("\n## Assigned Issues with No Recent Activity\n\n");
+    print!("\n## Assigned Issues with No Update in Past 24 Hours\n\n");
     let params = HashMap::<&str, &str>::new();
     for issue in issues {
-        if issue.updated_at > Utc::now() - Duration::weeks(1) {
+        if issue.updated_at > Utc::now() - Duration::days(1) {
             continue;
         }
         if issue.labels.contains(&"blocked".to_string()) {
