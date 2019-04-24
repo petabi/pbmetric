@@ -30,7 +30,18 @@ pub fn agenda<S: ToString>(token: S, project_ids: &[u64]) -> gitlab::Result<()> 
 
     let mut issues = issues_opened(&api, project_ids)?;
     issues.sort_by(issue_due_cmp);
-    stale_issues(&api, &issues, &mut projects)?;
+    let stale_issues = stale_issues(&api, &issues, &mut projects)?;
+    if !stale_issues.is_empty() {
+        print!("\n## Assigned Issues with No Update in Past 24 Hours\n\n");
+        for issue in stale_issues {
+            let project = &projects[&issue.project_id];
+            let assignee = assignee_username(issue).unwrap();
+            println!(
+                "* {}#{} {} @{}",
+                project.path, issue.iid, issue.title, assignee
+            );
+        }
+    }
 
     let since = Utc::now() - Duration::weeks(1);
     let issues = issues_updated_recently(&api, &since, project_ids)?;
@@ -79,12 +90,12 @@ pub fn agenda<S: ToString>(token: S, project_ids: &[u64]) -> gitlab::Result<()> 
     Ok(())
 }
 
-fn stale_issues(
+fn stale_issues<'a>(
     api: &Gitlab,
-    issues: &[Issue],
+    issues: &'a [Issue],
     projects: &mut HashMap<ProjectId, Project>,
-) -> gitlab::Result<()> {
-    print!("\n## Assigned Issues with No Update in Past 24 Hours\n\n");
+) -> gitlab::Result<Vec<&'a Issue>> {
+    let mut stale_issues = Vec::new();
     let params = HashMap::<&str, &str>::new();
     for issue in issues {
         if issue.updated_at > Utc::now() - Duration::days(1) {
@@ -93,23 +104,15 @@ fn stale_issues(
         if issue.labels.contains(&"blocked".to_string()) {
             continue;
         }
-        let assignee = if let Some(username) = assignee_username(issue) {
-            username
-        } else {
+        if assignee_username(issue).is_none() {
             continue;
-        };
-        let project = if let Some(project) = projects.get(&issue.project_id) {
-            project
-        } else {
-            projects.insert(issue.project_id, api.project(issue.project_id, &params)?);
-            &projects[&issue.project_id]
-        };
-        println!(
-            "* {}#{} {} @{}",
-            project.path, issue.iid, issue.title, assignee
-        );
+        }
+        projects
+            .entry(issue.project_id)
+            .or_insert(api.project(issue.project_id, &params)?);
+        stale_issues.push(issue);
     }
-    Ok(())
+    Ok(stale_issues)
 }
 
 fn assignee_username(issue: &Issue) -> Option<&str> {
