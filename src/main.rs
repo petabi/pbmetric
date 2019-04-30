@@ -19,6 +19,7 @@ const APPLICATION: &str = env!("CARGO_PKG_NAME");
 struct Config {
     gitlab_token: String,
     gitlab_projects: Vec<u64>,
+    gitlab_usernames: Vec<String>,
 }
 
 impl Config {
@@ -57,7 +58,11 @@ fn main() {
         None => Config::default(),
     };
 
-    if let Err(e) = agenda(config.gitlab_token, &config.gitlab_projects) {
+    if let Err(e) = agenda(
+        config.gitlab_token,
+        &config.gitlab_projects,
+        &config.gitlab_usernames,
+    ) {
         eprintln!("cannot create an agenda: {}", e);
         exit(1);
     }

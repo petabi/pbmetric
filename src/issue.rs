@@ -5,7 +5,11 @@ use maplit::btreemap;
 use std::cmp::Ordering;
 use std::collections::{BTreeMap, HashMap};
 
-pub fn agenda<S: ToString>(token: S, project_ids: &[u64]) -> gitlab::Result<()> {
+pub fn agenda<S: ToString>(
+    token: S,
+    project_ids: &[u64],
+    usernames: &[String],
+) -> gitlab::Result<()> {
     let api = Gitlab::new("gitlab.com", token)?;
     let mut projects = HashMap::new();
 
@@ -95,6 +99,9 @@ pub fn agenda<S: ToString>(token: S, project_ids: &[u64]) -> gitlab::Result<()> 
     print!("\n## Individual Statistics for the Past 90 Days\n\n");
     let stats = individual_stats(&issues, &quarter_ago);
     for (username, stats) in stats {
+        if !usernames.contains(&username) {
+            continue;
+        }
         println!("* {}", username);
         println!(
             "  - Issues completed per day: {:.3}",
