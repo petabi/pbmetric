@@ -104,8 +104,16 @@ pub fn agenda<S: ToString>(
         }
         println!("* {}", username);
         println!(
-            "  - Issues completed per day: {:.3}",
+            "  - {:.3} issues completed per day",
             stats.issues_completed as f64 / 90f64
+        );
+        println!(
+            "  - {:.3} issues (non-bug) opened per day",
+            stats.issues_opened as f64 / 90f64
+        );
+        println!(
+            "  - {:.3} bugs reported per day",
+            stats.bugs_reported as f64 / 90f64
         );
     }
     Ok(())
@@ -215,12 +223,27 @@ fn merge_requests_opened(api: &Gitlab, project_ids: &[u64]) -> gitlab::Result<Ve
 
 #[derive(Debug, Default)]
 struct IndividualStats {
+    bugs_reported: usize,
     issues_completed: usize,
+    issues_opened: usize,
 }
 
 fn individual_stats(issues: &[Issue], since: &DateTime<Utc>) -> BTreeMap<String, IndividualStats> {
     let mut stats = BTreeMap::new();
     for issue in issues {
+        if *since < issue.created_at {
+            if issue.labels.contains(&"bug".to_string()) {
+                let entry = stats
+                    .entry(issue.author.username.clone())
+                    .or_insert_with(IndividualStats::default);
+                entry.bugs_reported += 1;
+            } else {
+                let entry = stats
+                    .entry(issue.author.username.clone())
+                    .or_insert_with(IndividualStats::default);
+                entry.issues_opened += 1;
+            }
+        }
         if let Some(closed_at) = issue.closed_at {
             if *since < closed_at {
                 if let Some(username) = assignee_username(&issue) {
