@@ -50,7 +50,7 @@ pub fn agenda<S: ToString>(token: S, project_ids: &[u64]) -> gitlab::Result<()> 
     let mut authors = BTreeMap::new();
     let mut closed_count = 0usize;
     let mut assignees = BTreeMap::new();
-    for issue in issues {
+    for issue in &issues {
         if issue.updated_at < week_ago {
             continue;
         }
@@ -90,6 +90,16 @@ pub fn agenda<S: ToString>(token: S, project_ids: &[u64]) -> gitlab::Result<()> 
     assignees.sort();
     for (count, username) in assignees.iter().rev() {
         println!("  - {}: {}", username, count);
+    }
+
+    print!("\n## Individual Statistics for the Past 90 Days\n\n");
+    let stats = individual_stats(&issues, &quarter_ago);
+    for (username, stats) in stats {
+        println!("* {}", username);
+        println!(
+            "  - Issues completed per day: {:.3}",
+            stats.issues_completed as f64 / 90f64
+        );
     }
     Ok(())
 }
@@ -194,4 +204,26 @@ fn merge_requests_opened(api: &Gitlab, project_ids: &[u64]) -> gitlab::Result<Ve
         merge_requests.extend(api.merge_requests(ProjectId::new(*id), &params)?);
     }
     Ok(merge_requests)
+}
+
+#[derive(Debug, Default)]
+struct IndividualStats {
+    issues_completed: usize,
+}
+
+fn individual_stats(issues: &[Issue], since: &DateTime<Utc>) -> BTreeMap<String, IndividualStats> {
+    let mut stats = BTreeMap::new();
+    for issue in issues {
+        if let Some(closed_at) = issue.closed_at {
+            if *since < closed_at {
+                if let Some(username) = assignee_username(&issue) {
+                    let entry = stats
+                        .entry(username.to_string())
+                        .or_insert_with(IndividualStats::default);
+                    entry.issues_completed += 1;
+                }
+            }
+        }
+    }
+    stats
 }
