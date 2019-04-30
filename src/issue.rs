@@ -43,14 +43,18 @@ pub fn agenda<S: ToString>(token: S, project_ids: &[u64]) -> gitlab::Result<()> 
         }
     }
 
-    let since = Utc::now() - Duration::weeks(1);
-    let issues = issues_updated_recently(&api, &since, project_ids)?;
+    let quarter_ago = Utc::now() - Duration::days(90);
+    let week_ago = Utc::now() - Duration::weeks(1);
+    let issues = issues_updated_recently(&api, &quarter_ago, project_ids)?;
     let mut created_count = 0usize;
     let mut authors = BTreeMap::new();
     let mut closed_count = 0usize;
     let mut assignees = BTreeMap::new();
     for issue in issues {
-        if since < issue.created_at {
+        if issue.updated_at < week_ago {
+            continue;
+        }
+        if week_ago < issue.created_at {
             let entry = authors
                 .entry(issue.author.username.clone())
                 .or_insert(0usize);
@@ -58,7 +62,7 @@ pub fn agenda<S: ToString>(token: S, project_ids: &[u64]) -> gitlab::Result<()> 
             created_count += 1;
         }
         if let Some(closed_at) = issue.closed_at {
-            if since < closed_at {
+            if week_ago < closed_at {
                 if let Some(username) = assignee_username(&issue) {
                     let entry = assignees.entry(username.to_string()).or_insert(0usize);
                     *entry += 1;
