@@ -75,6 +75,7 @@ pub fn agenda<S: ToString>(
             }
         }
     }
+
     print!("\n## Changes in the Past Week\n\n");
     println!("* Created: {}", created_count);
     let mut authors = authors
@@ -96,8 +97,9 @@ pub fn agenda<S: ToString>(
         println!("  - {}: {}", username, count);
     }
 
+    let merge_requests = merged_merge_requests_opened_recently(&api, &quarter_ago, project_ids)?;
     print!("\n## Individual Statistics for the Past 90 Days\n\n");
-    let stats = individual_stats(&issues, &quarter_ago);
+    let stats = individual_stats(&issues, &merge_requests, &quarter_ago);
     for (username, stats) in stats {
         if !usernames.contains(&username) {
             continue;
@@ -114,6 +116,10 @@ pub fn agenda<S: ToString>(
         println!(
             "  - {:.3} bugs reported per day",
             stats.bugs_reported as f64 / 90f64
+        );
+        println!(
+            "  - {:.3} merge requests opened per day",
+            stats.merged_merge_requests_opened as f64 / 90f64
         );
     }
     Ok(())
@@ -179,6 +185,22 @@ fn issues_updated_recently(
     Ok(issues)
 }
 
+fn merged_merge_requests_opened_recently(
+    api: &Gitlab,
+    since: &DateTime<Utc>,
+    project_ids: &[u64],
+) -> gitlab::Result<Vec<MergeRequest>> {
+    let params = btreemap! {
+        "created_after" => since.to_string(),
+        "state"=>"merged".to_string(),
+    };
+    let mut merge_requests = Vec::new();
+    for id in project_ids {
+        merge_requests.extend(api.merge_requests(ProjectId::new(*id), &params)?);
+    }
+    Ok(merge_requests)
+}
+
 fn issue_due_cmp(lhs: &Issue, rhs: &Issue) -> Ordering {
     if let Some(lhs_date) = issue_due_date(lhs) {
         if let Some(rhs_date) = issue_due_date(rhs) {
@@ -226,9 +248,14 @@ struct IndividualStats {
     bugs_reported: usize,
     issues_completed: usize,
     issues_opened: usize,
+    merged_merge_requests_opened: usize,
 }
 
-fn individual_stats(issues: &[Issue], since: &DateTime<Utc>) -> BTreeMap<String, IndividualStats> {
+fn individual_stats(
+    issues: &[Issue],
+    merge_requests: &[MergeRequest],
+    since: &DateTime<Utc>,
+) -> BTreeMap<String, IndividualStats> {
     let mut stats = BTreeMap::new();
     for issue in issues {
         if *since < issue.created_at {
@@ -254,6 +281,12 @@ fn individual_stats(issues: &[Issue], since: &DateTime<Utc>) -> BTreeMap<String,
                 }
             }
         }
+    }
+    for mr in merge_requests {
+        let entry = stats
+            .entry(mr.author.username.clone())
+            .or_insert_with(IndividualStats::default);
+        entry.merged_merge_requests_opened += 1;
     }
     stats
 }
