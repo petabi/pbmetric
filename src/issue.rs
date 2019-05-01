@@ -121,6 +121,10 @@ pub fn agenda<S: ToString>(
             "  - {:.3} merge requests opened per day",
             stats.merged_merge_requests_opened as f64 / 90f64
         );
+        println!(
+            "  - {:5.2} comments per merge request",
+            stats.merge_request_notes as f64 / stats.merged_merge_requests_opened as f64
+        );
     }
     Ok(())
 }
@@ -249,6 +253,7 @@ struct IndividualStats {
     issues_completed: usize,
     issues_opened: usize,
     merged_merge_requests_opened: usize,
+    merge_request_notes: u64,
 }
 
 fn individual_stats(
@@ -287,6 +292,7 @@ fn individual_stats(
             .entry(mr.author.username.clone())
             .or_insert_with(IndividualStats::default);
         entry.merged_merge_requests_opened += 1;
+        entry.merge_request_notes += mr.user_notes_count;
     }
     stats
 }
