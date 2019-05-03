@@ -5,6 +5,7 @@ use clap::{crate_version, App};
 use directories::ProjectDirs;
 use serde::Deserialize;
 use std::collections::BTreeMap;
+use std::env;
 use std::fs;
 use std::fs::File;
 use std::io;
@@ -58,8 +59,22 @@ fn main() {
         }
     };
 
+    let orig_dir = match env::current_dir() {
+        Ok(dir) => dir,
+        Err(e) => {
+            eprintln!("cannot read the current directory: {}", e);
+            exit(1);
+        }
+    };
     if let Err(e) = git::update_all(&repo_dir, &config.repos) {
         eprintln!("cannot update git repositories: {}", e);
+        if let Err(e) = env::set_current_dir(orig_dir) {
+            eprintln!("cannot restore the working directory: {}", e);
+        }
+        exit(1);
+    }
+    if let Err(e) = env::set_current_dir(orig_dir) {
+        eprintln!("cannot restore the working directory: {}", e);
         exit(1);
     }
 
