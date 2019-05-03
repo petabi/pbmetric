@@ -11,6 +11,7 @@ use walkdir::WalkDir;
 #[derive(Deserialize)]
 pub struct Repo {
     url: String,
+    pub exclude: Option<Vec<String>>,
 }
 
 pub fn update_all<P: AsRef<Path>>(root: P, repos: &BTreeMap<String, Repo>) -> io::Result<()> {
@@ -27,12 +28,17 @@ pub fn update_all<P: AsRef<Path>>(root: P, repos: &BTreeMap<String, Repo>) -> io
     Ok(())
 }
 
-pub fn blame_stats<P: AsRef<Path>>(
+pub fn blame_stats<P, I, S>(
     path: P,
     since: &DateTime<Utc>,
-) -> io::Result<HashMap<String, usize>> {
-    let excludes = vec![r#"^.git/"#, r#"(^|/)Cargo.lock$"#];
-    let excludes = match RegexSet::new(excludes) {
+    exclude: I,
+) -> io::Result<HashMap<String, usize>>
+where
+    P: AsRef<Path>,
+    S: AsRef<str>,
+    I: IntoIterator<Item = S>,
+{
+    let exclude = match RegexSet::new(exclude) {
         Ok(set) => set,
         Err(e) => {
             return Err(io::Error::new(
@@ -55,7 +61,7 @@ pub fn blame_stats<P: AsRef<Path>>(
                 ))
             }
         };
-        if entry.file_type().is_dir() {
+        if entry.file_type().is_dir() || entry.path_is_symlink() {
             continue;
         }
         let pathstr = match entry.path().to_str() {
@@ -72,7 +78,7 @@ pub fn blame_stats<P: AsRef<Path>>(
                 ))
             }
         };
-        if excludes.is_match(pathstr) {
+        if exclude.is_match(pathstr) {
             continue;
         }
         println!("  {}", pathstr);
