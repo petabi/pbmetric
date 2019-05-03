@@ -25,6 +25,7 @@ struct Config {
     gitlab_token: String,
     gitlab_projects: Vec<u64>,
     gitlab_usernames: Vec<String>,
+    email_map: BTreeMap<String, String>,
     repos: BTreeMap<String, git::Repo>,
 }
 
@@ -80,6 +81,7 @@ fn main() {
         &config.gitlab_usernames,
         &repo_dir,
         &config.repos,
+        &config.email_map,
     ) {
         eprintln!("cannot create an agenda: {}", e);
         exit(1);

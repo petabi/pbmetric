@@ -133,6 +133,7 @@ pub struct IndividualStats {
     pub issues_opened: usize,
     pub merged_merge_requests_opened: usize,
     pub merge_request_notes: u64,
+    pub lines_contributed: usize,
 }
 
 pub fn individual_stats(
