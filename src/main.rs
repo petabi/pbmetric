@@ -1,5 +1,6 @@
 mod git;
 mod issue;
+mod report;
 
 use clap::{crate_version, App};
 use directories::ProjectDirs;
@@ -13,7 +14,7 @@ use std::io::prelude::*;
 use std::path::{Path, PathBuf};
 use std::process::exit;
 
-use issue::agenda;
+use report::agenda;
 
 const QUALIFIER: &str = "com";
 const ORGANIZATION: &str = "petabi";
