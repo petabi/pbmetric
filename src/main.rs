@@ -74,17 +74,18 @@ fn main() {
         }
         exit(1);
     }
-    if let Err(e) = env::set_current_dir(orig_dir) {
-        eprintln!("cannot restore the working directory: {}", e);
-        exit(1);
-    }
-
     if let Err(e) = agenda(
         config.gitlab_token,
         &config.gitlab_projects,
         &config.gitlab_usernames,
+        &repo_dir,
+        &config.repos,
     ) {
         eprintln!("cannot create an agenda: {}", e);
+        exit(1);
+    }
+    if let Err(e) = env::set_current_dir(orig_dir) {
+        eprintln!("cannot restore the working directory: {}", e);
         exit(1);
     }
 }

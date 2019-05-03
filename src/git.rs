@@ -1,3 +1,5 @@
+use chrono::{DateTime, Utc};
+use regex::RegexSet;
 use serde::Deserialize;
 use std::collections::BTreeMap;
 use std::env;
@@ -22,6 +24,56 @@ pub fn update_all<P: AsRef<Path>>(root: P, repos: &BTreeMap<String, Repo>) -> io
         }
         path.pop();
     }
+    Ok(())
+}
+
+pub fn blame_stats<P: AsRef<Path>>(path: P, _since: &DateTime<Utc>) -> io::Result<()> {
+    let excludes = vec![r#"^.git/"#];
+    let excludes = match RegexSet::new(excludes) {
+        Ok(set) => set,
+        Err(e) => {
+            return Err(io::Error::new(
+                io::ErrorKind::InvalidInput,
+                format!("invalid exclude pattern: {}", e),
+            ))
+        }
+    };
+
+    let orig_dir = env::current_dir()?;
+    env::set_current_dir(&path)?;
+    for entry in WalkDir::new(".") {
+        let entry = match entry {
+            Ok(entry) => entry,
+            Err(e) => {
+                return Err(io::Error::new(
+                    io::ErrorKind::Other,
+                    format!("cannot traverse repo: {}", e),
+                ))
+            }
+        };
+        if entry.file_type().is_dir() {
+            continue;
+        }
+        let pathstr = match entry.path().to_str() {
+            Some(pathstr) => {
+                if pathstr.len() < 2 {
+                    continue;
+                }
+                &pathstr[2..]
+            }
+            None => {
+                return Err(io::Error::new(
+                    io::ErrorKind::InvalidData,
+                    format!("invalid file name: {}", entry.path().display()),
+                ))
+            }
+        };
+        if excludes.is_match(pathstr) {
+            continue;
+        }
+        println!("Path: {}", pathstr);
+    }
+    env::set_current_dir(orig_dir)?;
     Ok(())
 }
 
