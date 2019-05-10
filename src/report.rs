@@ -112,8 +112,8 @@ pub fn agenda<S: ToString, P: AsRef<Path>>(
                 if let Some(username) = assignee_username(&issue) {
                     let entry = assignees.entry(username.to_string()).or_insert(0usize);
                     *entry += 1;
+                    closed_count += 1;
                 }
-                closed_count += 1;
             }
         }
     }
