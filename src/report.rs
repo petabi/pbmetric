@@ -1,7 +1,8 @@
-use chrono::{Duration, Utc};
+use chrono::{DateTime, Duration, Utc};
 use gitlab::Gitlab;
 use std::collections::{BTreeMap, HashMap};
 use std::path::Path;
+use std::cmp::max;
 use std::process::exit;
 
 use crate::git::{blame_stats, Repo};
@@ -17,8 +18,13 @@ pub fn agenda<S: ToString, P: AsRef<Path>>(
     repo_root: P,
     repos: &BTreeMap<String, Repo>,
     email_map: &BTreeMap<String, String>,
+    epoch: &Option<DateTime<Utc>>,
 ) -> gitlab::Result<()> {
     let quarter_ago = Utc::now() - Duration::days(90);
+    let since = match epoch {
+        Some(epoch) => max(epoch, &quarter_ago),
+        None => &quarter_ago,
+    };
 
     let mut total_loc = HashMap::new();
     let mut path = repo_root.as_ref().to_path_buf();
@@ -39,7 +45,7 @@ pub fn agenda<S: ToString, P: AsRef<Path>>(
         if let Some(repo_exclude) = &repo.exclude {
             exclude.extend(repo_exclude.iter().cloned());
         }
-        let blame_stats = match blame_stats(&path, &quarter_ago, exclude) {
+        let blame_stats = match blame_stats(&path, &since, exclude) {
             Ok(stats) => stats,
             Err(e) => {
                 eprintln!("cannot scan repositories: {}", e);
@@ -91,7 +97,7 @@ pub fn agenda<S: ToString, P: AsRef<Path>>(
     }
 
     let week_ago = Utc::now() - Duration::weeks(1);
-    let issues = issues_updated_recently(&api, &quarter_ago, project_ids)?;
+    let issues = issues_updated_recently(&api, &since, project_ids)?;
     let mut created_count = 0usize;
     let mut authors = BTreeMap::new();
     let mut closed_count = 0usize;
@@ -139,9 +145,9 @@ pub fn agenda<S: ToString, P: AsRef<Path>>(
         println!("  - {}: {}", username, count);
     }
 
-    let merge_requests = merged_merge_requests_opened_recently(&api, &quarter_ago, project_ids)?;
+    let merge_requests = merged_merge_requests_opened_recently(&api, &since, project_ids)?;
     print!("\n## Individual Statistics for the Past 90 Days\n\n");
-    let mut stats = individual_stats(&issues, &merge_requests, &quarter_ago);
+    let mut stats = individual_stats(&issues, &merge_requests, &since);
     for (email, loc) in &total_loc {
         let username = match email_map.get(email) {
             Some(username) => username,
@@ -156,30 +162,31 @@ pub fn agenda<S: ToString, P: AsRef<Path>>(
         if !usernames.contains(&username) {
             continue;
         }
-        print_individual_stat(&username, &stats);
+        print_individual_stat(&username, &stats, &since);
     }
     print_unknown_emails(&total_loc, email_map);
 
     Ok(())
 }
 
-fn print_individual_stat(username: &str, stats: &IndividualStats) {
+fn print_individual_stat(username: &str, stats: &IndividualStats, since: &DateTime<Utc>) {
+    let days = (Utc::now() - *since).num_days();
     println!("* {}", username);
     println!(
         "  - {:.3} issues completed per day",
-        stats.issues_completed as f64 / 90f64
+        stats.issues_completed as f64 / days as f64
     );
     println!(
         "  - {:.3} issues (non-bug) opened per day",
-        stats.issues_opened as f64 / 90f64
+        stats.issues_opened as f64 / days as f64
     );
     println!(
         "  - {:.3} bugs reported per day",
-        stats.bugs_reported as f64 / 90f64
+        stats.bugs_reported as f64 / days as f64
     );
     println!(
         "  - {:.3} merge requests opened per day",
-        stats.merged_merge_requests_opened as f64 / 90f64
+        stats.merged_merge_requests_opened as f64 / days as f64
     );
     println!(
         "  - {:5.2} comments per merge request",
@@ -187,7 +194,7 @@ fn print_individual_stat(username: &str, stats: &IndividualStats) {
     );
     println!(
         "  - {:5.2} lines of code contributed per day",
-        stats.lines_contributed as f64 / 90f64
+        stats.lines_contributed as f64 / days as f64
     );
 }
 

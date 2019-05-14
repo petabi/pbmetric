@@ -2,7 +2,8 @@ mod git;
 mod issue;
 mod report;
 
-use clap::{crate_version, App};
+use chrono::{DateTime, FixedOffset};
+use clap::{crate_version, App, Arg};
 use directories::ProjectDirs;
 use serde::Deserialize;
 use std::collections::BTreeMap;
@@ -41,8 +42,9 @@ impl Config {
 }
 
 fn main() {
-    let _matches = App::new(APPLICATION)
+    let matches = App::new(APPLICATION)
         .version(&crate_version!()[..])
+        .arg(Arg::with_name("epoch").long("epoch").takes_value(true))
         .get_matches();
 
     let dirs = match ProjectDirs::from(QUALIFIER, ORGANIZATION, APPLICATION) {
@@ -53,6 +55,17 @@ fn main() {
         }
     };
     let config = load_config(dirs.config_dir());
+    let epoch =
+        matches
+            .value_of("epoch")
+            .map(|v| match DateTime::<FixedOffset>::parse_from_rfc3339(v) {
+                Ok(epoch) => epoch.with_timezone(&chrono::Utc),
+                Err(e) => {
+                    eprintln!("invalid epoch: {}", e);
+                    exit(1);
+                }
+            });
+
     let repo_dir = match repo_dir(dirs.cache_dir()) {
         Ok(dir) => dir,
         Err(e) => {
@@ -82,6 +95,7 @@ fn main() {
         &repo_dir,
         &config.repos,
         &config.email_map,
+        &epoch,
     ) {
         eprintln!("cannot create an agenda: {}", e);
         exit(1);
