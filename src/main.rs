@@ -45,6 +45,11 @@ fn main() {
     let matches = App::new(APPLICATION)
         .version(&crate_version!()[..])
         .arg(Arg::with_name("epoch").long("epoch").takes_value(true))
+        .arg(
+            Arg::with_name("offline")
+                .long("offline")
+                .help("Skips updating repositories"),
+        )
         .get_matches();
 
     let dirs = match ProjectDirs::from(QUALIFIER, ORGANIZATION, APPLICATION) {
@@ -81,12 +86,15 @@ fn main() {
             exit(1);
         }
     };
-    if let Err(e) = git::update_all(&repo_dir, &config.repos) {
-        eprintln!("cannot update git repositories: {}", e);
-        if let Err(e) = env::set_current_dir(orig_dir) {
-            eprintln!("cannot restore the working directory: {}", e);
+    if !matches.is_present("offline") {
+        if let Err(e) = git::update_all(&repo_dir, &config.repos) {
+            eprintln!("cannot update git repositories: {}", e);
+            if let Err(e) = env::set_current_dir(orig_dir) {
+                eprintln!("cannot restore the working directory: {}", e);
+            }
+            exit(1);
         }
-        exit(1);
+
     }
     if let Err(e) = agenda(
         config.gitlab_token,
