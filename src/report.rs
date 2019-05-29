@@ -1,8 +1,8 @@
 use chrono::{DateTime, Duration, Utc};
 use gitlab::Gitlab;
+use std::cmp::max;
 use std::collections::{BTreeMap, HashMap};
 use std::path::Path;
-use std::cmp::max;
 use std::process::exit;
 
 use crate::git::{blame_stats, Repo};
