@@ -108,27 +108,43 @@ fn parse_blame(blame: &str, since: &DateTime<Utc>) -> HashMap<String, usize> {
     for line in blame.split('\n') {
         let email_start = match line.find("(<") {
             Some(cur) => cur + 2,
-            None => continue, // invalid line
+            None => {
+                eprintln!("Warning: cannot find where email address begins: {}", line);
+                continue;
+            }
         };
         let email_end = match line[email_start + 1..].find('>') {
             Some(cur) => cur + email_start + 1,
-            None => continue, // invalid line
+            None => {
+                eprintln!("Warning: cannot find where email address ends: {}", line);
+                continue;
+            }
         };
         let email = &line[email_start..email_end];
         let timestamp_end = match line[email_end + 1..].find(')') {
             Some(cur) => match line[email_end + 1..=cur + email_end].rfind(' ') {
                 Some(cur) => cur + email_end + 1,
-                None => continue, // invalid line
+                None => {
+                    eprintln!("Warning: cannot find where timestamp ends: {}", line);
+                    continue;
+                }
             },
-            None => continue, // invalid line
+            None => {
+                eprintln!("Warning: cannot find where blame info ends: {}", line);
+                continue;
+            }
         };
-        if timestamp_end < 25 {
-            println!("error: {}..{}, {}", email_end + 1, timestamp_end, line);
-        }
+        let timestamp_str = line[email_end + 1..timestamp_end].trim();
         let timestamp =
-            match DateTime::parse_from_str(&line[timestamp_end - 25..timestamp_end], "%F %T %z") {
+            match DateTime::parse_from_str(timestamp_str, "%F %T %z") {
                 Ok(timestamp) => timestamp,
-                Err(_) => continue, // invalid timestamp
+                Err(_) => {
+                    eprintln!(
+                        r#"Warning: invalid timestamp format: "{}""#,
+                        &line[timestamp_end - 25..timestamp_end]
+                    );
+                    continue;
+                }
             };
         if timestamp < since.with_timezone(&timestamp.timezone()) {
             continue;
