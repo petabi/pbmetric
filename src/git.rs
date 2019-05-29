@@ -106,6 +106,9 @@ fn blame(filename: &str) -> io::Result<String> {
 fn parse_blame(blame: &str, since: &DateTime<Utc>) -> HashMap<String, usize> {
     let mut loc = HashMap::new();
     for line in blame.split('\n') {
+        if line.len() == 0 {
+            continue; // skip the last line
+        }
         let email_start = match line.find("(<") {
             Some(cur) => cur + 2,
             None => {
@@ -135,17 +138,13 @@ fn parse_blame(blame: &str, since: &DateTime<Utc>) -> HashMap<String, usize> {
             }
         };
         let timestamp_str = line[email_end + 1..timestamp_end].trim();
-        let timestamp =
-            match DateTime::parse_from_str(timestamp_str, "%F %T %z") {
-                Ok(timestamp) => timestamp,
-                Err(_) => {
-                    eprintln!(
-                        r#"Warning: invalid timestamp format: "{}""#,
-                        &line[timestamp_end - 25..timestamp_end]
-                    );
-                    continue;
-                }
-            };
+        let timestamp = match DateTime::parse_from_str(timestamp_str, "%F %T %z") {
+            Ok(timestamp) => timestamp,
+            Err(_) => {
+                eprintln!(r#"Warning: invalid timestamp format: "{}""#, timestamp_str);
+                continue;
+            }
+        };
         if timestamp < since.with_timezone(&timestamp.timezone()) {
             continue;
         }
