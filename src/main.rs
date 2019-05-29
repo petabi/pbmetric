@@ -44,6 +44,7 @@ impl Config {
 fn main() {
     let matches = App::new(APPLICATION)
         .version(&crate_version!()[..])
+        .arg(Arg::with_name("asof").long("asof").takes_value(true))
         .arg(Arg::with_name("epoch").long("epoch").takes_value(true))
         .arg(
             Arg::with_name("offline")
@@ -60,13 +61,23 @@ fn main() {
         }
     };
     let config = load_config(dirs.config_dir());
+    let asof =
+        matches.value_of("asof").map_or_else(chrono::Utc::now, |v| {
+            match DateTime::<FixedOffset>::parse_from_rfc3339(v) {
+                Ok(asof) => asof.with_timezone(&chrono::Utc),
+                Err(e) => {
+                    eprintln!("{}: {}", e, v);
+                    exit(1);
+                }
+            }
+        });
     let epoch =
         matches
             .value_of("epoch")
             .map(|v| match DateTime::<FixedOffset>::parse_from_rfc3339(v) {
                 Ok(epoch) => epoch.with_timezone(&chrono::Utc),
                 Err(e) => {
-                    eprintln!("invalid epoch: {}", e);
+                    eprintln!("{}: {}", e, v);
                     exit(1);
                 }
             });
@@ -86,15 +97,17 @@ fn main() {
             exit(1);
         }
     };
-    if !matches.is_present("offline") {
-        if let Err(e) = git::update_all(&repo_dir, &config.repos) {
-            eprintln!("cannot update git repositories: {}", e);
-            if let Err(e) = env::set_current_dir(orig_dir) {
-                eprintln!("cannot restore the working directory: {}", e);
-            }
-            exit(1);
+    if let Err(e) = git::update_all(
+        &repo_dir,
+        &config.repos,
+        &asof,
+        matches.is_present("offline"),
+    ) {
+        eprintln!("cannot update git repositories: {}", e);
+        if let Err(e) = env::set_current_dir(orig_dir) {
+            eprintln!("cannot restore the working directory: {}", e);
         }
-
+        exit(1);
     }
     if let Err(e) = agenda(
         config.gitlab_token,
@@ -103,6 +116,7 @@ fn main() {
         &repo_dir,
         &config.repos,
         &config.email_map,
+        &asof,
         &epoch,
     ) {
         eprintln!("cannot create an agenda: {}", e);

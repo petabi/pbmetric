@@ -1,5 +1,5 @@
 use chrono::naive::NaiveDate;
-use chrono::{DateTime, Duration, Utc};
+use chrono::{DateTime, Duration, SecondsFormat, Utc};
 use gitlab::{Gitlab, Issue, MergeRequest, Project, ProjectId};
 use maplit::btreemap;
 use std::cmp::Ordering;
@@ -8,12 +8,13 @@ use std::collections::{BTreeMap, HashMap};
 pub fn stale_issues<'a>(
     api: &Gitlab,
     issues: &'a [Issue],
+    asof: &DateTime<Utc>,
     projects: &mut HashMap<ProjectId, Project>,
 ) -> gitlab::Result<Vec<&'a Issue>> {
     let mut stale_issues = Vec::new();
     let params = HashMap::<&str, &str>::new();
     for issue in issues {
-        if issue.updated_at > Utc::now() - Duration::days(1) {
+        if issue.updated_at > *asof - Duration::days(1) {
             continue;
         }
         if issue.labels.contains(&"blocked".to_string()) {
@@ -43,8 +44,13 @@ pub fn assignee_username(issue: &Issue) -> Option<&str> {
     }
 }
 
-pub fn issues_opened(api: &Gitlab, project_ids: &[u64]) -> gitlab::Result<Vec<Issue>> {
-    let params = btreemap! { "state" => "opened" };
+pub fn issues_opened(
+    api: &Gitlab,
+    project_ids: &[u64],
+    asof: &DateTime<Utc>,
+) -> gitlab::Result<Vec<Issue>> {
+    let rfc3339_asof = asof.to_rfc3339_opts(SecondsFormat::Millis, true);
+    let params = btreemap! { "state" => "opened", "created_before" => &rfc3339_asof };
     let mut issues = Vec::new();
     for id in project_ids {
         issues.extend(api.issues(ProjectId::new(*id), &params)?);
@@ -54,10 +60,14 @@ pub fn issues_opened(api: &Gitlab, project_ids: &[u64]) -> gitlab::Result<Vec<Is
 
 pub fn issues_updated_recently(
     api: &Gitlab,
-    since: &DateTime<Utc>,
     project_ids: &[u64],
+    since: &DateTime<Utc>,
+    asof: &DateTime<Utc>,
 ) -> gitlab::Result<Vec<Issue>> {
-    let params = btreemap! {"updated_after" => since.to_string() };
+    let params = btreemap! {
+        "updated_after" => since.to_string(),
+        "created_before" => asof.to_rfc3339_opts(SecondsFormat::Millis, true),
+    };
     let mut issues = Vec::new();
     for id in project_ids {
         issues.extend(api.issues(ProjectId::new(*id), &params)?);
@@ -67,12 +77,14 @@ pub fn issues_updated_recently(
 
 pub fn merged_merge_requests_opened_recently(
     api: &Gitlab,
-    since: &DateTime<Utc>,
     project_ids: &[u64],
+    since: &DateTime<Utc>,
+    asof: &DateTime<Utc>,
 ) -> gitlab::Result<Vec<MergeRequest>> {
     let params = btreemap! {
-        "created_after" => since.to_string(),
-        "state"=>"merged".to_string(),
+        "created_after" => since.to_rfc3339_opts(SecondsFormat::Millis, true),
+        "created_before" => asof.to_rfc3339_opts(SecondsFormat::Millis, true),
+        "state" => "merged".to_string(),
     };
     let mut merge_requests = Vec::new();
     for id in project_ids {
@@ -117,8 +129,11 @@ fn issue_due_date(issue: &Issue) -> Option<NaiveDate> {
 pub fn merge_requests_opened(
     api: &Gitlab,
     project_ids: &[u64],
+    asof: &DateTime<Utc>,
 ) -> gitlab::Result<Vec<MergeRequest>> {
-    let params = btreemap! { "state" => "opened", "wip" => "no" };
+    let rfc3339_asof = asof.to_rfc3339_opts(SecondsFormat::Millis, true);
+    let params =
+        btreemap! { "state" => "opened", "wip" => "no", "created_before" => &rfc3339_asof };
     let mut merge_requests = Vec::new();
     for id in project_ids {
         merge_requests.extend(api.merge_requests(ProjectId::new(*id), &params)?);
@@ -140,10 +155,11 @@ pub fn individual_stats(
     issues: &[Issue],
     merge_requests: &[MergeRequest],
     since: &DateTime<Utc>,
+    asof: &DateTime<Utc>,
 ) -> BTreeMap<String, IndividualStats> {
     let mut stats = BTreeMap::new();
     for issue in issues {
-        if *since < issue.created_at {
+        if *since < issue.created_at && issue.created_at < *asof {
             if issue.labels.contains(&"bug".to_string()) {
                 let entry = stats
                     .entry(issue.author.username.clone())
@@ -157,7 +173,7 @@ pub fn individual_stats(
             }
         }
         if let Some(closed_at) = issue.closed_at {
-            if *since < closed_at {
+            if *since < closed_at && closed_at < *asof {
                 if let Some(username) = assignee_username(&issue) {
                     let entry = stats
                         .entry(username.to_string())

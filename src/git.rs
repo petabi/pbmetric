@@ -14,15 +14,19 @@ pub struct Repo {
     pub exclude: Option<Vec<String>>,
 }
 
-pub fn update_all<P: AsRef<Path>>(root: P, repos: &BTreeMap<String, Repo>) -> io::Result<()> {
+pub fn update_all<P: AsRef<Path>>(
+    root: P,
+    repos: &BTreeMap<String, Repo>,
+    asof: &DateTime<Utc>,
+    offline: bool,
+) -> io::Result<()> {
     let mut path = root.as_ref().to_path_buf();
     for (name, repo) in repos {
         path.push(name);
-        if path.exists() {
-            update(&path)?;
-        } else {
+        if !path.exists() {
             clone(&repo.url, &path)?;
         }
+        update(&path, asof, offline)?;
         path.pop();
     }
     Ok(())
@@ -31,6 +35,7 @@ pub fn update_all<P: AsRef<Path>>(root: P, repos: &BTreeMap<String, Repo>) -> io
 pub fn blame_stats<P, I, S>(
     path: P,
     since: &DateTime<Utc>,
+    asof: &DateTime<Utc>,
     exclude: I,
 ) -> io::Result<HashMap<String, usize>>
 where
@@ -83,7 +88,7 @@ where
         }
         println!("  {}", pathstr);
         let blameout = blame(pathstr)?;
-        for (email, loc) in parse_blame(&blameout, since) {
+        for (email, loc) in parse_blame(&blameout, since, asof) {
             let entry = total_loc.entry(email).or_insert(0);
             *entry += loc;
         }
@@ -103,7 +108,7 @@ fn blame(filename: &str) -> io::Result<String> {
     Ok(outstr.to_string())
 }
 
-fn parse_blame(blame: &str, since: &DateTime<Utc>) -> HashMap<String, usize> {
+fn parse_blame(blame: &str, since: &DateTime<Utc>, asof: &DateTime<Utc>) -> HashMap<String, usize> {
     let mut loc = HashMap::new();
     for line in blame.split('\n') {
         if line.is_empty() {
@@ -145,7 +150,9 @@ fn parse_blame(blame: &str, since: &DateTime<Utc>) -> HashMap<String, usize> {
                 continue;
             }
         };
-        if timestamp < since.with_timezone(&timestamp.timezone()) {
+        if timestamp < since.with_timezone(&timestamp.timezone())
+            || asof.with_timezone(&timestamp.timezone()) < timestamp
+        {
             continue;
         }
         let entry = loc.entry(email.to_string()).or_insert(0);
@@ -171,15 +178,41 @@ fn clone<P: AsRef<Path>>(url: &str, path: P) -> io::Result<()> {
     Ok(())
 }
 
-fn update<P: AsRef<Path>>(path: P) -> io::Result<()> {
+fn update<P: AsRef<Path>>(path: P, asof: &DateTime<Utc>, offline: bool) -> io::Result<()> {
     let orig_dir = env::current_dir()?;
     env::set_current_dir(path)?;
-    let status = Command::new("git").args(&["fetch", "origin"]).status()?;
+    if !offline {
+        let status = Command::new("git").args(&["fetch", "origin"]).status()?;
+        if !status.success() {
+            return Err(io::Error::new(io::ErrorKind::Other, "git operation failed"));
+        }
+    }
+    let status = Command::new("git").args(&["checkout", "master"]).status()?;
     if !status.success() {
         return Err(io::Error::new(io::ErrorKind::Other, "git operation failed"));
     }
+    if !offline {
+        let status = Command::new("git")
+            .args(&["reset", "--hard", "origin/master"])
+            .status()?;
+        if !status.success() {
+            return Err(io::Error::new(io::ErrorKind::Other, "git operation failed"));
+        }
+    }
+    let before_arg = format!(r#"--before="{}""#, asof.to_rfc3339());
+    let output = Command::new("git")
+        .args(&[
+            "rev-list",
+            "-n",
+            "1",
+            "--first-parent",
+            &before_arg,
+            "master",
+        ])
+        .output()?;
+    let gitref = String::from_utf8(output.stdout).unwrap();
     let status = Command::new("git")
-        .args(&["reset", "--hard", "origin/master"])
+        .args(&["checkout", gitref.trim()])
         .status()?;
     if !status.success() {
         return Err(io::Error::new(io::ErrorKind::Other, "git operation failed"));

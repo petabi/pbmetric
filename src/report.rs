@@ -18,9 +18,10 @@ pub fn agenda<S: ToString, P: AsRef<Path>>(
     repo_root: P,
     repos: &BTreeMap<String, Repo>,
     email_map: &BTreeMap<String, String>,
+    asof: &DateTime<Utc>,
     epoch: &Option<DateTime<Utc>>,
 ) -> gitlab::Result<()> {
-    let quarter_ago = Utc::now() - Duration::days(90);
+    let quarter_ago = *asof - Duration::days(90);
     let since = match epoch {
         Some(epoch) => max(epoch, &quarter_ago),
         None => &quarter_ago,
@@ -45,7 +46,7 @@ pub fn agenda<S: ToString, P: AsRef<Path>>(
         if let Some(repo_exclude) = &repo.exclude {
             exclude.extend(repo_exclude.iter().cloned());
         }
-        let blame_stats = match blame_stats(&path, &since, exclude) {
+        let blame_stats = match blame_stats(&path, &since, asof, exclude) {
             Ok(stats) => stats,
             Err(e) => {
                 eprintln!("cannot scan repositories: {}", e);
@@ -62,7 +63,7 @@ pub fn agenda<S: ToString, P: AsRef<Path>>(
     let api = Gitlab::new("gitlab.com", token)?;
     let mut projects = HashMap::new();
 
-    let merge_requests = merge_requests_opened(&api, project_ids)?;
+    let merge_requests = merge_requests_opened(&api, project_ids, asof)?;
     if !merge_requests.is_empty() {
         print!("\n## Merge Requests Under Review\n\n");
         for mr in merge_requests {
@@ -81,9 +82,9 @@ pub fn agenda<S: ToString, P: AsRef<Path>>(
         }
     }
 
-    let mut issues = issues_opened(&api, project_ids)?;
+    let mut issues = issues_opened(&api, project_ids, asof)?;
     issues.sort_by(issue_due_cmp);
-    let stale_issues = stale_issues(&api, &issues, &mut projects)?;
+    let stale_issues = stale_issues(&api, &issues, asof, &mut projects)?;
     if !stale_issues.is_empty() {
         print!("\n## Assigned Issues with No Update in Past 24 Hours\n\n");
         for issue in stale_issues {
@@ -96,8 +97,8 @@ pub fn agenda<S: ToString, P: AsRef<Path>>(
         }
     }
 
-    let week_ago = Utc::now() - Duration::weeks(1);
-    let issues = issues_updated_recently(&api, &since, project_ids)?;
+    let week_ago = *asof - Duration::weeks(1);
+    let issues = issues_updated_recently(&api, project_ids, &since, asof)?;
     let mut created_count = 0usize;
     let mut authors = BTreeMap::new();
     let mut closed_count = 0usize;
@@ -106,7 +107,7 @@ pub fn agenda<S: ToString, P: AsRef<Path>>(
         if issue.updated_at < week_ago {
             continue;
         }
-        if week_ago < issue.created_at {
+        if week_ago < issue.created_at && issue.created_at < *asof {
             let entry = authors
                 .entry(issue.author.username.clone())
                 .or_insert(0usize);
@@ -114,7 +115,7 @@ pub fn agenda<S: ToString, P: AsRef<Path>>(
             created_count += 1;
         }
         if let Some(closed_at) = issue.closed_at {
-            if week_ago < closed_at {
+            if week_ago < closed_at && closed_at < *asof {
                 if let Some(username) = assignee_username(&issue) {
                     let entry = assignees.entry(username.to_string()).or_insert(0usize);
                     *entry += 1;
@@ -145,9 +146,9 @@ pub fn agenda<S: ToString, P: AsRef<Path>>(
         println!("  - {}: {}", username, count);
     }
 
-    let merge_requests = merged_merge_requests_opened_recently(&api, &since, project_ids)?;
+    let merge_requests = merged_merge_requests_opened_recently(&api, project_ids, &since, &asof)?;
     print!("\n## Individual Statistics for the Past 90 Days\n\n");
-    let mut stats = individual_stats(&issues, &merge_requests, &since);
+    let mut stats = individual_stats(&issues, &merge_requests, &since, &asof);
     for (email, loc) in &total_loc {
         let username = match email_map.get(email) {
             Some(username) => username,
@@ -162,15 +163,20 @@ pub fn agenda<S: ToString, P: AsRef<Path>>(
         if !usernames.contains(&username) {
             continue;
         }
-        print_individual_stat(&username, &stats, &since);
+        print_individual_stat(&username, &stats, &since, asof);
     }
     print_unknown_emails(&total_loc, email_map);
 
     Ok(())
 }
 
-fn print_individual_stat(username: &str, stats: &IndividualStats, since: &DateTime<Utc>) {
-    let days = (Utc::now() - *since).num_days();
+fn print_individual_stat(
+    username: &str,
+    stats: &IndividualStats,
+    since: &DateTime<Utc>,
+    asof: &DateTime<Utc>,
+) {
+    let days = (*asof - *since).num_days();
     println!("* {}", username);
     println!(
         "  - {:.3} issues completed per day",
