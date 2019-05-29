@@ -106,7 +106,7 @@ fn blame(filename: &str) -> io::Result<String> {
 fn parse_blame(blame: &str, since: &DateTime<Utc>) -> HashMap<String, usize> {
     let mut loc = HashMap::new();
     for line in blame.split('\n') {
-        if line.len() == 0 {
+        if line.is_empty() {
             continue; // skip the last line
         }
         let email_start = match line.find("(<") {
