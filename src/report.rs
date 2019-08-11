@@ -35,6 +35,7 @@ pub fn agenda<S: ToString, P: AsRef<Path>>(
         r#"\.dat$"#,
         r#"\.log$"#,
         r#"\.pcap$"#,
+        r#"^LICENSE$"#,
     ];
     for (name, repo) in repos {
         path.push(name);
