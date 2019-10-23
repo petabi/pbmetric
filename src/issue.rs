@@ -1,16 +1,18 @@
 use chrono::naive::NaiveDate;
 use chrono::{DateTime, Duration, SecondsFormat, Utc};
-use gitlab::{Gitlab, Issue, MergeRequest, Project, ProjectId};
+use gitlab::{Gitlab, GitlabError, Issue, MergeRequest, Project, ProjectId};
 use maplit::btreemap;
 use std::cmp::Ordering;
 use std::collections::{BTreeMap, HashMap};
+
+type GitlabResult<T> = Result<T, GitlabError>;
 
 pub fn stale_issues<'a>(
     api: &Gitlab,
     issues: &'a [Issue],
     asof: &DateTime<Utc>,
     projects: &mut HashMap<ProjectId, Project>,
-) -> gitlab::Result<Vec<&'a Issue>> {
+) -> GitlabResult<Vec<&'a Issue>> {
     let mut stale_issues = Vec::new();
     let params = HashMap::<&str, &str>::new();
     for issue in issues {
@@ -48,7 +50,7 @@ pub fn issues_opened(
     api: &Gitlab,
     project_ids: &[u64],
     asof: &DateTime<Utc>,
-) -> gitlab::Result<Vec<Issue>> {
+) -> GitlabResult<Vec<Issue>> {
     let rfc3339_asof = asof.to_rfc3339_opts(SecondsFormat::Millis, true);
     let params = btreemap! { "state" => "opened", "created_before" => &rfc3339_asof };
     let mut issues = Vec::new();
@@ -63,7 +65,7 @@ pub fn issues_updated_recently(
     project_ids: &[u64],
     since: &DateTime<Utc>,
     asof: &DateTime<Utc>,
-) -> gitlab::Result<Vec<Issue>> {
+) -> GitlabResult<Vec<Issue>> {
     let params = btreemap! {
         "updated_after" => since.to_string(),
         "created_before" => asof.to_rfc3339_opts(SecondsFormat::Millis, true),
@@ -80,7 +82,7 @@ pub fn merged_merge_requests_opened_recently(
     project_ids: &[u64],
     since: &DateTime<Utc>,
     asof: &DateTime<Utc>,
-) -> gitlab::Result<Vec<MergeRequest>> {
+) -> GitlabResult<Vec<MergeRequest>> {
     let params = btreemap! {
         "created_after" => since.to_rfc3339_opts(SecondsFormat::Millis, true),
         "created_before" => asof.to_rfc3339_opts(SecondsFormat::Millis, true),
@@ -130,7 +132,7 @@ pub fn merge_requests_opened(
     api: &Gitlab,
     project_ids: &[u64],
     asof: &DateTime<Utc>,
-) -> gitlab::Result<Vec<MergeRequest>> {
+) -> GitlabResult<Vec<MergeRequest>> {
     let rfc3339_asof = asof.to_rfc3339_opts(SecondsFormat::Millis, true);
     let params =
         btreemap! { "state" => "opened", "wip" => "no", "created_before" => &rfc3339_asof };

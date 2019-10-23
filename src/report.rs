@@ -1,5 +1,5 @@
 use chrono::{DateTime, Duration, Utc};
-use gitlab::Gitlab;
+use gitlab::{Gitlab, GitlabError};
 use std::cmp::max;
 use std::collections::{BTreeMap, HashMap};
 use std::path::Path;
@@ -11,6 +11,8 @@ use crate::issue::{
     merge_requests_opened, merged_merge_requests_opened_recently, stale_issues, IndividualStats,
 };
 
+type GitlabResult<T> = Result<T, GitlabError>;
+
 pub fn agenda<S: ToString, P: AsRef<Path>>(
     token: S,
     project_ids: &[u64],
@@ -20,7 +22,7 @@ pub fn agenda<S: ToString, P: AsRef<Path>>(
     email_map: &BTreeMap<String, String>,
     asof: &DateTime<Utc>,
     epoch: &Option<DateTime<Utc>>,
-) -> gitlab::Result<()> {
+) -> GitlabResult<()> {
     let quarter_ago = *asof - Duration::days(90);
     let since = match epoch {
         Some(epoch) => max(epoch, &quarter_ago),
