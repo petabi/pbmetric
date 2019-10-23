@@ -76,7 +76,6 @@ fn main() {
             exit(1);
         }
     };
-    println!("{:?}", dirs.config_dir());
     let config = load_config(dirs.config_dir());
     let asof =
         matches.value_of("asof").map_or_else(chrono::Utc::now, |v| {
