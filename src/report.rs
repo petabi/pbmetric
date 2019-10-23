@@ -1,7 +1,9 @@
+use anyhow::Result;
 use chrono::{DateTime, Duration, Utc};
-use gitlab::{Gitlab, GitlabError};
+use gitlab::Gitlab;
 use std::cmp::max;
 use std::collections::{BTreeMap, HashMap};
+use std::io::Write;
 use std::path::Path;
 use std::process::exit;
 
@@ -11,9 +13,8 @@ use crate::issue::{
     merge_requests_opened, merged_merge_requests_opened_recently, stale_issues, IndividualStats,
 };
 
-type GitlabResult<T> = Result<T, GitlabError>;
-
 pub fn agenda<S: ToString, P: AsRef<Path>>(
+    out: &mut dyn Write,
     token: S,
     project_ids: &[u64],
     usernames: &[String],
@@ -22,7 +23,7 @@ pub fn agenda<S: ToString, P: AsRef<Path>>(
     email_map: &BTreeMap<String, String>,
     asof: &DateTime<Utc>,
     epoch: &Option<DateTime<Utc>>,
-) -> GitlabResult<()> {
+) -> Result<()> {
     let quarter_ago = *asof - Duration::days(90);
     let since = match epoch {
         Some(epoch) => max(epoch, &quarter_ago),
@@ -68,7 +69,7 @@ pub fn agenda<S: ToString, P: AsRef<Path>>(
 
     let merge_requests = merge_requests_opened(&api, project_ids, asof)?;
     if !merge_requests.is_empty() {
-        print!("\n## Merge Requests Under Review\n\n");
+        out.write(b"\n## Merge Requests Under Review\n\n")?;
         for mr in merge_requests {
             let project = if let Some(project) = projects.get(&mr.project_id) {
                 project
@@ -77,11 +78,11 @@ pub fn agenda<S: ToString, P: AsRef<Path>>(
                 projects.insert(mr.project_id, api.project(mr.project_id, &params)?);
                 &projects[&mr.project_id]
             };
-            print!("* {}!{} {}", project.path, mr.iid, mr.title);
+            out.write(format!("* {}!{} {}", project.path, mr.iid, mr.title).as_bytes())?;
             if let Some(assignee) = &mr.assignee {
-                print!(" @{}", assignee.username);
+                out.write(format!(" @{}", assignee.username).as_bytes())?;
             }
-            println!();
+            out.write(b"\n")?;
         }
     }
 
@@ -89,14 +90,17 @@ pub fn agenda<S: ToString, P: AsRef<Path>>(
     issues.sort_by(issue_due_cmp);
     let stale_issues = stale_issues(&api, &issues, asof, &mut projects)?;
     if !stale_issues.is_empty() {
-        print!("\n## Assigned Issues with No Update in Past 24 Hours\n\n");
+        out.write(b"\n## Assigned Issues with No Update in Past 24 Hours\n\n")?;
         for issue in stale_issues {
             let project = &projects[&issue.project_id];
             let assignee = assignee_username(issue).unwrap();
-            println!(
-                "* {}#{} {} @{}",
-                project.path, issue.iid, issue.title, assignee
-            );
+            out.write(
+                format!(
+                    "* {}#{} {} @{}\n",
+                    project.path, issue.iid, issue.title, assignee
+                )
+                .as_bytes(),
+            )?;
         }
     }
 
@@ -128,29 +132,28 @@ pub fn agenda<S: ToString, P: AsRef<Path>>(
         }
     }
 
-    print!("\n## Changes in the Past Week\n\n");
-    println!("* Created: {}", created_count);
+    out.write(b"\n## Changes in the Past Week\n\n")?;
+    out.write(format!("* Created: {}\n", created_count).as_bytes())?;
     let mut authors = authors
         .iter()
         .map(|(username, count)| (*count, username))
         .collect::<Vec<(usize, &String)>>();
     authors.sort();
     for (count, username) in authors.iter().rev() {
-        println!("  - {}: {}", username, count);
+        out.write(format!("  - {}: {}\n", username, count).as_bytes())?;
     }
-    println!();
-    println!("* Completed: {}", closed_count);
+    out.write(format!("\n* Completed: {}\n", closed_count).as_bytes())?;
     let mut assignees = assignees
         .iter()
         .map(|(username, count)| (*count, username))
         .collect::<Vec<(usize, &String)>>();
     assignees.sort();
     for (count, username) in assignees.iter().rev() {
-        println!("  - {}: {}", username, count);
+        out.write(format!("  - {}: {}\n", username, count).as_bytes())?;
     }
 
     let merge_requests = merged_merge_requests_opened_recently(&api, project_ids, &since, &asof)?;
-    print!("\n## Individual Statistics for the Past 90 Days\n\n");
+    out.write(b"\n## Individual Statistics for the Past 90 Days\n\n")?;
     let mut stats = individual_stats(&issues, &merge_requests, &since, &asof);
     for (email, loc) in &total_loc {
         let username = match email_map.get(email) {
@@ -166,53 +169,78 @@ pub fn agenda<S: ToString, P: AsRef<Path>>(
         if !usernames.contains(&username) {
             continue;
         }
-        print_individual_stat(&username, &stats, &since, asof);
+        print_individual_stat(out, &username, &stats, &since, asof)?;
     }
-    print_unknown_emails(&total_loc, email_map);
+    print_unknown_emails(out, &total_loc, email_map)?;
 
     Ok(())
 }
 
 fn print_individual_stat(
+    out: &mut dyn Write,
     username: &str,
     stats: &IndividualStats,
     since: &DateTime<Utc>,
     asof: &DateTime<Utc>,
-) {
+) -> Result<()> {
     let days = (*asof - *since).num_days();
-    println!("* {}", username);
-    println!(
-        "  - {:.3} issues completed per day",
-        stats.issues_completed as f64 / days as f64
-    );
-    println!(
-        "  - {:.3} issues (non-bug) opened per day",
-        stats.issues_opened as f64 / days as f64
-    );
-    println!(
-        "  - {:.3} bugs reported per day",
-        stats.bugs_reported as f64 / days as f64
-    );
-    println!(
-        "  - {:.3} merge requests opened per day",
-        stats.merged_merge_requests_opened as f64 / days as f64
-    );
-    println!(
-        "  - {:5.2} comments per merge request",
-        stats.merge_request_notes as f64 / stats.merged_merge_requests_opened as f64
-    );
-    println!(
-        "  - {:5.2} lines of code contributed per day",
-        stats.lines_contributed as f64 / days as f64
-    );
+    out.write(format!("* {}\n", username).as_bytes())?;
+    out.write(
+        format!(
+            "  - {:.3} issues completed per day\n",
+            stats.issues_completed as f64 / days as f64
+        )
+        .as_bytes(),
+    )?;
+    out.write(
+        format!(
+            "  - {:.3} issues (non-bug) opened per day\n",
+            stats.issues_opened as f64 / days as f64
+        )
+        .as_bytes(),
+    )?;
+    out.write(
+        format!(
+            "  - {:.3} bugs reported per day\n",
+            stats.bugs_reported as f64 / days as f64
+        )
+        .as_bytes(),
+    )?;
+    out.write(
+        format!(
+            "  - {:.3} merge requests opened per day\n",
+            stats.merged_merge_requests_opened as f64 / days as f64
+        )
+        .as_bytes(),
+    )?;
+    out.write(
+        format!(
+            "  - {:5.2} comments per merge request\n",
+            stats.merge_request_notes as f64 / stats.merged_merge_requests_opened as f64
+        )
+        .as_bytes(),
+    )?;
+    out.write(
+        format!(
+            "  - {:5.2} lines of code contributed per day\n",
+            stats.lines_contributed as f64 / days as f64
+        )
+        .as_bytes(),
+    )?;
+    Ok(())
 }
 
-fn print_unknown_emails(total_loc: &HashMap<String, usize>, email_map: &BTreeMap<String, String>) {
-    print!("\n## Other emails in commits\n\n");
+fn print_unknown_emails(
+    out: &mut dyn Write,
+    total_loc: &HashMap<String, usize>,
+    email_map: &BTreeMap<String, String>,
+) -> Result<()> {
+    out.write(b"\n## Other emails in commits\n\n")?;
     for (email, loc) in total_loc {
         if email_map.contains_key(email) {
             continue;
         }
-        println!("* {}: {} lines contributed", email, loc);
+        out.write(format!("* {}: {} lines contributed\n", email, loc).as_bytes())?;
     }
+    Ok(())
 }

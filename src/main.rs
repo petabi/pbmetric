@@ -2,9 +2,13 @@ mod git;
 mod issue;
 mod report;
 
+use crate::report::agenda;
 use chrono::{DateTime, FixedOffset};
 use clap::{crate_version, App, Arg};
 use directories::ProjectDirs;
+use lettre::smtp::authentication::IntoCredentials;
+use lettre::{SmtpClient, Transport};
+use lettre_email::EmailBuilder;
 use serde::Deserialize;
 use std::collections::BTreeMap;
 use std::env;
@@ -15,17 +19,29 @@ use std::io::prelude::*;
 use std::path::{Path, PathBuf};
 use std::process::exit;
 
-use report::agenda;
-
 const QUALIFIER: &str = "com";
 const ORGANIZATION: &str = "petabi";
 const APPLICATION: &str = env!("CARGO_PKG_NAME");
 
 #[derive(Default, Deserialize)]
+struct MailConfig {
+    server: String,
+    username: String,
+    password: String,
+    recipient: String,
+}
+
+#[derive(Default, Deserialize)]
+struct GitlabConfig {
+    token: String,
+    projects: Vec<u64>,
+    usernames: Vec<String>,
+}
+
+#[derive(Default, Deserialize)]
 struct Config {
-    gitlab_token: String,
-    gitlab_projects: Vec<u64>,
-    gitlab_usernames: Vec<String>,
+    mail: MailConfig,
+    gitlab: GitlabConfig,
     email_map: BTreeMap<String, String>,
     repos: BTreeMap<String, git::Repo>,
 }
@@ -60,6 +76,7 @@ fn main() {
             exit(1);
         }
     };
+    println!("{:?}", dirs.config_dir());
     let config = load_config(dirs.config_dir());
     let asof =
         matches.value_of("asof").map_or_else(chrono::Utc::now, |v| {
@@ -109,10 +126,12 @@ fn main() {
         }
         exit(1);
     }
+    let mut body = Vec::<u8>::new();
     if let Err(e) = agenda(
-        config.gitlab_token,
-        &config.gitlab_projects,
-        &config.gitlab_usernames,
+        &mut body,
+        config.gitlab.token,
+        &config.gitlab.projects,
+        &config.gitlab.usernames,
         &repo_dir,
         &config.repos,
         &config.email_map,
@@ -126,6 +145,21 @@ fn main() {
         eprintln!("cannot restore the working directory: {}", e);
         exit(1);
     }
+
+    let email = EmailBuilder::new()
+        .to(config.mail.recipient.as_str())
+        .from(config.mail.username.as_str())
+        .subject("Project Snapshot")
+        .text(String::from_utf8(body).unwrap())
+        .build()
+        .unwrap()
+        .into();
+    let credentials = (config.mail.username, config.mail.password).into_credentials();
+    let mut client = SmtpClient::new_simple(&config.mail.server)
+        .unwrap()
+        .credentials(credentials)
+        .transport();
+    let _result = client.send(email);
 }
 
 fn load_config<P: AsRef<Path>>(dir: P) -> Config {
