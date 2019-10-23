@@ -234,13 +234,18 @@ fn print_unknown_emails(
     out: &mut dyn Write,
     total_loc: &HashMap<String, usize>,
     email_map: &BTreeMap<String, String>,
-) -> Result<()> {
-    out.write(b"\n## Other emails in commits\n\n")?;
+) -> Result<bool> {
+    let mut buf = Vec::<u8>::new();
     for (email, loc) in total_loc {
         if email_map.contains_key(email) {
             continue;
         }
-        out.write(format!("* {}: {} lines contributed\n", email, loc).as_bytes())?;
+        buf.write(format!("* {}: {} lines contributed\n", email, loc).as_bytes())?;
     }
-    Ok(())
+    if buf.is_empty() {
+        return Ok(false);
+    }
+    out.write(b"\n## Other emails in commits\n\n")?;
+    out.write(&buf)?;
+    Ok(true)
 }

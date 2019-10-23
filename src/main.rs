@@ -149,7 +149,7 @@ fn main() {
     let email = EmailBuilder::new()
         .to(config.mail.recipient.as_str())
         .from(config.mail.username.as_str())
-        .subject("Project Snapshot")
+        .subject(format!("Project Snapshot {}", chrono::offset::Utc::today()))
         .text(String::from_utf8(body).unwrap())
         .build()
         .unwrap()
