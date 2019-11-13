@@ -38,6 +38,7 @@ pub fn agenda<S: ToString, P: AsRef<Path>>(
         r#"\.dat$"#,
         r#"\.log$"#,
         r#"\.pcap$"#,
+        r#"\.png$"#,
         r#"^LICENSE$"#,
     ];
     for (name, repo) in repos {
