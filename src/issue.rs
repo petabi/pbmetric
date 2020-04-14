@@ -95,7 +95,7 @@ pub fn merged_merge_requests_opened_recently(
     Ok(merge_requests)
 }
 
-pub fn issue_due_cmp(lhs: &Issue, rhs: &Issue) -> Ordering {
+pub fn due_cmp(lhs: &Issue, rhs: &Issue) -> Ordering {
     if let Some(lhs_date) = issue_due_date(lhs) {
         if let Some(rhs_date) = issue_due_date(rhs) {
             let order = lhs_date.cmp(&rhs_date);

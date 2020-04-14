@@ -9,7 +9,7 @@ use std::process::exit;
 
 use crate::git::{blame_stats, Repo};
 use crate::issue::{
-    assignee_username, individual_stats, issue_due_cmp, issues_opened, issues_updated_recently,
+    assignee_username, due_cmp, individual_stats, issues_opened, issues_updated_recently,
     merge_requests_opened, merged_merge_requests_opened_recently, stale_issues, IndividualStats,
 };
 
@@ -88,7 +88,7 @@ pub fn agenda<S: ToString, P: AsRef<Path>>(
     }
 
     let mut issues = issues_opened(&api, project_ids, asof)?;
-    issues.sort_by(issue_due_cmp);
+    issues.sort_by(due_cmp);
     let stale_issues = stale_issues(&api, &issues, asof, &mut projects)?;
     if !stale_issues.is_empty() {
         out.write(b"\n## Assigned Issues with No Update in Past 24 Hours\n\n")?;
@@ -107,9 +107,9 @@ pub fn agenda<S: ToString, P: AsRef<Path>>(
 
     let week_ago = *asof - Duration::weeks(1);
     let issues = issues_updated_recently(&api, project_ids, &since, asof)?;
-    let mut created_count = 0usize;
+    let mut created_count = 0_usize;
     let mut authors = BTreeMap::new();
-    let mut closed_count = 0usize;
+    let mut closed_count = 0_usize;
     let mut assignees = BTreeMap::new();
     for issue in &issues {
         if issue.updated_at < week_ago {
@@ -118,14 +118,14 @@ pub fn agenda<S: ToString, P: AsRef<Path>>(
         if week_ago < issue.created_at && issue.created_at < *asof {
             let entry = authors
                 .entry(issue.author.username.clone())
-                .or_insert(0usize);
+                .or_insert(0_usize);
             *entry += 1;
             created_count += 1;
         }
         if let Some(closed_at) = issue.closed_at {
             if week_ago < closed_at && closed_at < *asof {
                 if let Some(username) = assignee_username(&issue) {
-                    let entry = assignees.entry(username.to_string()).or_insert(0usize);
+                    let entry = assignees.entry(username.to_string()).or_insert(0_usize);
                     *entry += 1;
                     closed_count += 1;
                 }
