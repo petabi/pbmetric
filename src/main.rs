@@ -2,7 +2,7 @@ mod git;
 mod issue;
 mod report;
 
-use crate::report::agenda;
+use crate::report::{agenda, GitlabConfig};
 use chrono::{DateTime, FixedOffset};
 use clap::{crate_version, App, Arg};
 use directories::ProjectDirs;
@@ -29,13 +29,6 @@ struct MailConfig {
     username: String,
     password: String,
     recipient: String,
-}
-
-#[derive(Default, Deserialize)]
-struct GitlabConfig {
-    token: String,
-    projects: Vec<u64>,
-    usernames: Vec<String>,
 }
 
 #[derive(Default, Deserialize)]
@@ -69,12 +62,11 @@ fn main() {
         )
         .get_matches();
 
-    let dirs = match ProjectDirs::from(QUALIFIER, ORGANIZATION, APPLICATION) {
-        Some(dirs) => dirs,
-        None => {
-            eprintln!("no valid home directory path");
-            exit(1);
-        }
+    let dirs = if let Some(dirs) = ProjectDirs::from(QUALIFIER, ORGANIZATION, APPLICATION) {
+        dirs
+    } else {
+        eprintln!("no valid home directory path");
+        exit(1);
     };
     let config = load_config(dirs.config_dir());
     let asof =
@@ -128,9 +120,7 @@ fn main() {
     let mut body = Vec::<u8>::new();
     if let Err(e) = agenda(
         &mut body,
-        config.gitlab.token,
-        &config.gitlab.projects,
-        &config.gitlab.usernames,
+        &config.gitlab,
         &repo_dir,
         &config.repos,
         &config.email_map,
