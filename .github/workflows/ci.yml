@@ -22,7 +22,7 @@ jobs:
       run: cargo test --verbose
     - name: Install components
       if: matrix.os == 'ubuntu-latest' && matrix.rust == 'stable'
-      run: rustup component add rustfmt
+      run: rustup component add clippy rustfmt
     - name: Check formatting
       if: matrix.os == 'ubuntu-latest' && matrix.rust == 'stable'
       run: cargo fmt -- --check
