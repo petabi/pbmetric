@@ -1,4 +1,5 @@
 use crate::git::{blame_stats, Repo};
+use crate::github;
 use crate::issue::{
     assignee_username, due_cmp, individual_stats, issues_opened, issues_updated_recently,
     merge_requests_opened, merged_merge_requests_opened_recently, stale_issues, IndividualStats,
@@ -26,7 +27,7 @@ const EXCLUDE_DEFAULT: [&str; 7] = [
 #[derive(Default, Deserialize)]
 pub struct GithubConfig {
     token: String,
-    projects: Vec<String>,
+    repositories: Vec<String>,
     usernames: Vec<String>,
 }
 
@@ -37,9 +38,10 @@ pub struct GitlabConfig {
     usernames: Vec<String>,
 }
 
+#[allow(clippy::too_many_arguments)]
 pub fn agenda<P: AsRef<Path>>(
     out: &mut dyn Write,
-    _github_conf: &GithubConfig,
+    github_conf: &GithubConfig,
     gitlab_conf: &GitlabConfig,
     repo_root: P,
     repos: &BTreeMap<String, Repo>,
@@ -55,24 +57,27 @@ pub fn agenda<P: AsRef<Path>>(
 
     let total_loc = repo_loc(repo_root.as_ref(), repos, &since, asof);
 
-    let api = Gitlab::new("gitlab.com", &gitlab_conf.token)?;
+    let github_api = github::Client::new(&github_conf.token);
+    let gitlab_api = Gitlab::new("gitlab.com", &gitlab_conf.token)?;
 
-    let merge_requests = merge_requests_opened(&api, &gitlab_conf.projects, asof)?;
+    let pull_requests = github_api.open_pull_requests(&github_conf.repositories)?;
+    let merge_requests = merge_requests_opened(&gitlab_api, &gitlab_conf.projects, asof)?;
     let mut projects = if merge_requests.is_empty() {
+        write_merge_request_section(out, &pull_requests, &merge_requests, &gitlab_api)?;
         HashMap::new()
     } else {
-        write_merge_request_section(out, &merge_requests, &api)?
+        write_merge_request_section(out, &pull_requests, &merge_requests, &gitlab_api)?
     };
 
-    let mut issues = issues_opened(&api, &gitlab_conf.projects, asof)?;
+    let mut issues = issues_opened(&gitlab_api, &gitlab_conf.projects, asof)?;
     issues.sort_by(due_cmp);
-    let stale_issues = stale_issues(&api, &issues, asof, &mut projects)?;
+    let stale_issues = stale_issues(&gitlab_api, &issues, asof, &mut projects)?;
     if !stale_issues.is_empty() {
         write_issues_section(out, &projects, &stale_issues)?;
     }
 
     let week_ago = *asof - Duration::weeks(1);
-    let issues = issues_updated_recently(&api, &gitlab_conf.projects, &since, asof)?;
+    let issues = issues_updated_recently(&gitlab_api, &gitlab_conf.projects, &since, asof)?;
     let mut created_count = 0_usize;
     let mut authors = BTreeMap::new();
     let mut closed_count = 0_usize;
@@ -120,7 +125,7 @@ pub fn agenda<P: AsRef<Path>>(
     }
 
     let merge_requests =
-        merged_merge_requests_opened_recently(&api, &gitlab_conf.projects, &since, &asof)?;
+        merged_merge_requests_opened_recently(&gitlab_api, &gitlab_conf.projects, &since, &asof)?;
     out.write_all(b"\n## Individual Statistics for the Past 90 Days\n\n")?;
     let mut stats = individual_stats(&issues, &merge_requests, &since, &asof);
     for (email, loc) in &total_loc {
@@ -134,7 +139,8 @@ pub fn agenda<P: AsRef<Path>>(
         entry.lines_contributed += loc;
     }
     for (username, stats) in stats {
-        if !gitlab_conf.usernames.contains(&username) {
+        if !github_conf.usernames.contains(&username) && !gitlab_conf.usernames.contains(&username)
+        {
             continue;
         }
         print_individual_stat(out, &username, &stats, &since, asof)?;
@@ -180,11 +186,22 @@ fn repo_loc(
 
 fn write_merge_request_section(
     out: &mut dyn Write,
+    pull_requests: &[github::PullRequest],
     merge_requests: &[gitlab::MergeRequest],
     api: &Gitlab,
 ) -> Result<HashMap<gitlab::ProjectId, gitlab::Project>> {
     let mut projects = HashMap::new();
-    out.write_all(b"\n## Merge Requests Under Review\n\n")?;
+    if pull_requests.is_empty() && merge_requests.is_empty() {
+        return Ok(projects);
+    }
+    out.write_all(b"\n## Pull/Merge Requests Under Review\n\n")?;
+    for pr in pull_requests {
+        out.write_all(format!("* {}#{} {}", pr.repo, pr.number, pr.title).as_bytes())?;
+        for assignee in &pr.assignees {
+            out.write_all(format!(" @{}", assignee).as_bytes())?;
+        }
+        out.write_all(b"\n")?;
+    }
     for mr in merge_requests {
         let project = if let Some(project) = projects.get(&mr.project_id) {
             project

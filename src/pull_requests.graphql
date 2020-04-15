@@ -1,0 +1,15 @@
+query GithubPullRequests($owner: String!, $name: String!) {
+  repository(owner: $owner name: $name) {
+    pullRequests(last: 20 states: OPEN) {
+      nodes {
+        title
+        number
+        assignees(last: 10) {
+          nodes {
+            login
+          }
+        }
+      }
+    }
+  }
+}

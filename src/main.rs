@@ -1,4 +1,5 @@
 mod git;
+mod github;
 mod issue;
 mod report;
 
