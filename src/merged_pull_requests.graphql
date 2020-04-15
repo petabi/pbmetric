@@ -1,0 +1,16 @@
+query MergedPullRequests($owner: String!, $name: String!) {
+  repository(owner: $owner name: $name) {
+    pullRequests(states: MERGED orderBy: { direction: DESC field: CREATED_AT } first: 100) {
+      nodes {
+        createdAt
+        author {
+          __typename
+          login
+        }
+        comments(last: 100) {
+          totalCount
+        }
+      }
+    }
+  }
+}

@@ -153,8 +153,11 @@ pub struct IndividualStats {
     pub lines_contributed: usize,
 }
 
+#[allow(clippy::cast_sign_loss)]
 pub fn individual_stats(
     issues: &[Issue],
+    pull_requests: &HashMap<String, (usize, i64)>,
+    account_map: &HashMap<String, String>,
     merge_requests: &[MergeRequest],
     since: &DateTime<Utc>,
     asof: &DateTime<Utc>,
@@ -191,6 +194,18 @@ pub fn individual_stats(
             .or_insert_with(IndividualStats::default);
         entry.merged_merge_requests_opened += 1;
         entry.merge_request_notes += mr.user_notes_count;
+    }
+    for (login, count) in pull_requests {
+        let author = if let Some(author) = account_map.get(login) {
+            author
+        } else {
+            continue;
+        };
+        let entry = stats
+            .entry(author.to_string())
+            .or_insert_with(IndividualStats::default);
+        entry.merged_merge_requests_opened += count.0;
+        entry.merge_request_notes += count.1 as u64;
     }
     stats
 }

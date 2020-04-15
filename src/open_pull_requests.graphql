@@ -1,9 +1,13 @@
-query GithubPullRequests($owner: String!, $name: String!) {
+query OpenPullRequests($owner: String!, $name: String!) {
   repository(owner: $owner name: $name) {
     pullRequests(last: 20 states: OPEN) {
       nodes {
         title
         number
+        author {
+          __typename
+          login
+        }
         assignees(last: 10) {
           nodes {
             login
