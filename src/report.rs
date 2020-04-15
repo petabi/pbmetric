@@ -24,6 +24,13 @@ const EXCLUDE_DEFAULT: [&str; 7] = [
 ];
 
 #[derive(Default, Deserialize)]
+pub struct GithubConfig {
+    token: String,
+    projects: Vec<String>,
+    usernames: Vec<String>,
+}
+
+#[derive(Default, Deserialize)]
 pub struct GitlabConfig {
     token: String,
     projects: Vec<u64>,
@@ -32,6 +39,7 @@ pub struct GitlabConfig {
 
 pub fn agenda<P: AsRef<Path>>(
     out: &mut dyn Write,
+    _github_conf: &GithubConfig,
     gitlab_conf: &GitlabConfig,
     repo_root: P,
     repos: &BTreeMap<String, Repo>,

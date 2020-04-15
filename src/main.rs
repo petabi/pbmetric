@@ -2,7 +2,7 @@ mod git;
 mod issue;
 mod report;
 
-use crate::report::{agenda, GitlabConfig};
+use crate::report::{agenda, GithubConfig, GitlabConfig};
 use chrono::{DateTime, FixedOffset};
 use clap::{crate_version, App, Arg};
 use directories::ProjectDirs;
@@ -34,6 +34,7 @@ struct MailConfig {
 #[derive(Default, Deserialize)]
 struct Config {
     mail: MailConfig,
+    github: GithubConfig,
     gitlab: GitlabConfig,
     email_map: BTreeMap<String, String>,
     repos: BTreeMap<String, git::Repo>,
@@ -120,6 +121,7 @@ fn main() {
     let mut body = Vec::<u8>::new();
     if let Err(e) = agenda(
         &mut body,
+        &config.github,
         &config.gitlab,
         &repo_dir,
         &config.repos,
