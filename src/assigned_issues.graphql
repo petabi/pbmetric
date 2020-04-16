@@ -1,0 +1,16 @@
+query AssignedIssues($owner: String!, $name: String!) {
+  repository(owner: $owner name: $name) {
+    issues(filterBy: { assignee: "*" } orderBy: { direction: DESC field: UPDATED_AT } first: 100  states: OPEN) {
+      nodes {
+        title
+        number
+        assignees(last: 10) {
+          nodes {
+            login
+          }
+        }
+        updatedAt
+      }
+    }
+  }
+}

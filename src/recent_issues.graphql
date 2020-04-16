@@ -1,0 +1,24 @@
+query RecentIssues($owner: String!, $name: String!, $since: DateTime!) {
+  repository(owner: $owner name: $name) {
+    issues(filterBy: { assignee: "*" since: $since } orderBy: { direction: DESC field: UPDATED_AT } first: 100) {
+      nodes {
+        createdAt
+        closedAt
+        author {
+          __typename
+          login
+        }
+        assignees(last: 10) {
+          nodes {
+            login
+          }
+        }
+        labels(last: 10) {
+          nodes {
+            name
+          }
+        }
+      }
+    }
+  }
+}

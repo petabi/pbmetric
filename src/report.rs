@@ -8,7 +8,7 @@ use anyhow::Result;
 use chrono::{DateTime, Duration, Utc};
 use gitlab::{self, Gitlab};
 use serde::Deserialize;
-use std::cmp::max;
+use std::cmp::{max, Ordering};
 use std::collections::{BTreeMap, HashMap};
 use std::io::Write;
 use std::path::Path;
@@ -38,6 +38,7 @@ pub struct GitlabConfig {
     usernames: Vec<String>,
 }
 
+#[allow(clippy::cast_possible_truncation)]
 #[allow(clippy::too_many_arguments)]
 #[allow(clippy::too_many_lines)]
 pub fn agenda<P: AsRef<Path>>(
@@ -70,19 +71,32 @@ pub fn agenda<P: AsRef<Path>>(
         write_merge_request_section(out, &pull_requests, &merge_requests, &gitlab_api)?
     };
 
-    let mut issues = issues_opened(&gitlab_api, &gitlab_conf.projects, asof)?;
-    issues.sort_by(due_cmp);
-    let stale_issues = stale_issues(&gitlab_api, &issues, asof, &mut projects)?;
+    let github_issues = github_api.assigned_stale_issues(&github_conf.repositories, asof)?;
+    let mut gitlab_issues = issues_opened(&gitlab_api, &gitlab_conf.projects, asof)?;
+    gitlab_issues.sort_by(due_cmp);
+    let stale_issues = stale_issues(&gitlab_api, &gitlab_issues, asof, &mut projects)?;
     if !stale_issues.is_empty() {
-        write_issues_section(out, &projects, &stale_issues)?;
+        write_issues_section(out, &github_issues, &projects, &stale_issues)?;
     }
 
     let week_ago = *asof - Duration::weeks(1);
+    let github_issue_stats =
+        github_api.recent_issues_per_login(&github_conf.repositories, &since, &week_ago)?;
     let issues = issues_updated_recently(&gitlab_api, &gitlab_conf.projects, &since, asof)?;
-    let mut created_count = 0_usize;
-    let mut authors = BTreeMap::new();
-    let mut closed_count = 0_usize;
-    let mut assignees = BTreeMap::new();
+    let mut created_count: usize = github_issue_stats.values().map(|v| v.3).sum();
+    let mut authors = github_issue_stats
+        .iter()
+        .map(|(k, v)| (github_conf.account[k].clone(), v.3))
+        .collect::<BTreeMap<String, usize>>();
+    let mut closed_count = github_issue_stats
+        .values()
+        .map(|v| v.4)
+        .sum::<f32>()
+        .round() as i64;
+    let mut assignees = github_issue_stats
+        .iter()
+        .map(|(k, v)| (github_conf.account[k].clone(), v.4))
+        .collect::<BTreeMap<String, f32>>();
     for issue in &issues {
         if issue.updated_at < week_ago {
             continue;
@@ -97,8 +111,8 @@ pub fn agenda<P: AsRef<Path>>(
         if let Some(closed_at) = issue.closed_at {
             if week_ago < closed_at && closed_at < *asof {
                 if let Some(username) = assignee_username(&issue) {
-                    let entry = assignees.entry(username.to_string()).or_insert(0_usize);
-                    *entry += 1;
+                    let entry = assignees.entry(username.to_string()).or_insert(0.0);
+                    *entry += 1.0;
                     closed_count += 1;
                 }
             }
@@ -119,10 +133,10 @@ pub fn agenda<P: AsRef<Path>>(
     let mut assignees = assignees
         .iter()
         .map(|(username, count)| (*count, username))
-        .collect::<Vec<(usize, &String)>>();
-    assignees.sort();
+        .collect::<Vec<(f32, &String)>>();
+    assignees.sort_by(|a, b| a.partial_cmp(b).unwrap_or(Ordering::Less));
     for (count, username) in assignees.iter().rev() {
-        out.write_all(format!("  - {}: {}\n", username, count).as_bytes())?;
+        out.write_all(format!("  - {}: {:.0}\n", username, count).as_bytes())?;
     }
 
     let pull_requests =
@@ -237,11 +251,19 @@ fn write_merge_request_section(
 
 fn write_issues_section(
     out: &mut dyn Write,
+    github_issues: &[github::Issue],
     projects: &HashMap<gitlab::ProjectId, gitlab::Project>,
-    stale_issues: &[&gitlab::Issue],
+    gitlab_issues: &[&gitlab::Issue],
 ) -> Result<()> {
     out.write_all(b"\n## Assigned Issues with No Update in Past 24 Hours\n\n")?;
-    for issue in stale_issues {
+    for issue in github_issues {
+        out.write_all(format!("* {}#{} {}", issue.repo, issue.number, issue.title).as_bytes())?;
+        for assignee in &issue.assignees {
+            out.write_all(format!(" @{}", assignee).as_bytes())?;
+        }
+        out.write_all(b"\n")?;
+    }
+    for issue in gitlab_issues {
         let project = &projects[&issue.project_id];
         let assignee = assignee_username(issue).unwrap();
         out.write_all(
