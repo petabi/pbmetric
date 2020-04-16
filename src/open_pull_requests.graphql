@@ -4,10 +4,6 @@ query OpenPullRequests($owner: String!, $name: String!) {
       nodes {
         title
         number
-        author {
-          __typename
-          login
-        }
         assignees(last: 10) {
           nodes {
             login
