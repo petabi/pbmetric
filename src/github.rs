@@ -1,6 +1,5 @@
 use anyhow::Result;
 use graphql_client::GraphQLQuery;
-use reqwest;
 use std::collections::HashMap;
 
 type DateTime = String;
