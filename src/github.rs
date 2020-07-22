@@ -113,6 +113,78 @@ impl Client {
         Ok(issues)
     }
 
+    pub fn issue_metadata_since(
+        &self,
+        repos: &[String],
+        since: &chrono::DateTime<chrono::Utc>,
+    ) -> Result<Vec<IssueMetadata>> {
+        let mut issues = Vec::new();
+        let rfc3339_since = since.to_rfc3339();
+        for repo in repos {
+            let query = RecentIssues::build_query(recent_issues::Variables {
+                owner: "petabi".to_string(),
+                name: repo.to_string(),
+                since: rfc3339_since.clone(),
+            });
+            let res = self
+                .inner
+                .post("https://api.github.com/graphql")
+                .bearer_auth(&self.token)
+                .json(&query)
+                .send()?;
+
+            let body: graphql_client::Response<recent_issues::ResponseData> = res.json()?;
+            if let Some(data) = body.data {
+                if let Some(repository) = data.repository {
+                    if let Some(nodes) = repository.issues.nodes {
+                        for node in nodes {
+                            if let Some(node) = node {
+                                let author = node
+                                    .author
+                                    .map_or_else(|| "unknown".to_string(), |v| v.login);
+                                let created_at =
+                                    chrono::DateTime::parse_from_rfc3339(&node.created_at)?;
+                                let labels = if let Some(labels) = node.labels {
+                                    if let Some(nodes) = labels.nodes {
+                                        nodes
+                                            .into_iter()
+                                            .filter_map(|v| v.map(|v| v.name))
+                                            .collect()
+                                    } else {
+                                        Vec::new()
+                                    }
+                                } else {
+                                    Vec::new()
+                                };
+                                let closed_at = if let Some(closed_at) = node.closed_at {
+                                    Some(chrono::DateTime::parse_from_rfc3339(&closed_at)?)
+                                } else {
+                                    None
+                                };
+                                let assignees = if let Some(nodes) = node.assignees.nodes {
+                                    nodes
+                                        .into_iter()
+                                        .filter_map(|v| v.map(|v| v.login))
+                                        .collect()
+                                } else {
+                                    Vec::new()
+                                };
+                                issues.push(IssueMetadata {
+                                    author,
+                                    labels,
+                                    assignees,
+                                    created_at,
+                                    closed_at,
+                                });
+                            }
+                        }
+                    }
+                }
+            }
+        }
+        Ok(issues)
+    }
+
     #[allow(clippy::type_complexity)]
     pub fn recent_issues_per_login(
         &self,
@@ -306,6 +378,15 @@ pub struct Issue {
     pub number: i64,
     pub repo: String,
     pub assignees: Vec<String>,
+}
+
+#[derive(Debug)]
+pub struct IssueMetadata {
+    pub author: String,
+    pub labels: Vec<String>,
+    pub assignees: Vec<String>,
+    pub created_at: chrono::DateTime<chrono::offset::FixedOffset>,
+    pub closed_at: Option<chrono::DateTime<chrono::offset::FixedOffset>>,
 }
 
 #[derive(Debug)]
