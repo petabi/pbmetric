@@ -1,6 +1,6 @@
 query RecentIssues($owner: String!, $name: String!, $since: DateTime!) {
   repository(owner: $owner name: $name) {
-    issues(filterBy: { assignee: "*" since: $since } orderBy: { direction: DESC field: UPDATED_AT } first: 100) {
+    issues(filterBy: { since: $since } orderBy: { direction: DESC field: UPDATED_AT } first: 100) {
       nodes {
         createdAt
         closedAt

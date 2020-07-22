@@ -3,7 +3,7 @@ mod github;
 mod issue;
 mod report;
 
-use crate::report::{agenda, GithubConfig, GitlabConfig};
+use crate::report::{agenda, GithubConfig};
 use chrono::{DateTime, FixedOffset};
 use clap::{crate_version, App, Arg};
 use directories::ProjectDirs;
@@ -36,7 +36,6 @@ struct MailConfig {
 struct Config {
     mail: MailConfig,
     github: GithubConfig,
-    gitlab: GitlabConfig,
     email_map: BTreeMap<String, String>,
     repos: BTreeMap<String, git::Repo>,
 }
@@ -123,7 +122,6 @@ fn main() {
     if let Err(e) = agenda(
         &mut body,
         &config.github,
-        &config.gitlab,
         &repo_dir,
         &config.repos,
         &config.email_map,
