@@ -1,6 +1,12 @@
 [package]
 name = "pbmetric"
 version = "0.3.0"
+description = """
+pbmetric collects metrics from various tools and services to help Petabi members improve productivity."""
+readme = "README.md"
+homepage = "https://github.com/petabi/pbmetric"
+repository = "https://github.com/petabi/pbmetric"
+license = "Apache-2.0"
 authors = ["Min Kim <msk@dolbo.net>"]
 edition = "2018"
 
