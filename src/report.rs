@@ -50,11 +50,11 @@ pub fn agenda<P: AsRef<Path>>(
     let github_api = github::Client::new(&github_conf.token);
 
     let pull_requests = github_api.open_pull_requests(&github_conf.repositories)?;
-    write_pull_request_section(out, &pull_requests)?;
+    write_pull_request_section(out, &pull_requests, &github_conf.account)?;
 
     let github_issues = github_api.assigned_stale_issues(&github_conf.repositories, asof)?;
     if !github_issues.is_empty() {
-        write_issues_section(out, &github_issues)?;
+        write_issues_section(out, &github_issues, &github_conf.account)?;
     }
 
     let issue_metadata = github_api.issue_metadata_since(&github_conf.repositories, &since)?;
@@ -87,6 +87,7 @@ pub fn agenda<P: AsRef<Path>>(
         if *count == 0 {
             continue;
         }
+        let username = github_conf.account.get(*username).unwrap_or(username);
         out.write_all(format!("  - {}: {}\n", username, count).as_bytes())?;
     }
     out.write_all(format!("\n* Completed: {}\n", closed_count).as_bytes())?;
@@ -174,6 +175,7 @@ fn repo_loc(
 fn write_pull_request_section(
     out: &mut dyn Write,
     pull_requests: &[github::PullRequest],
+    account_map: &HashMap<String, String>,
 ) -> Result<()> {
     if pull_requests.is_empty() {
         return Ok(());
@@ -182,19 +184,25 @@ fn write_pull_request_section(
     for pr in pull_requests {
         out.write_all(format!("* {}#{} {}", pr.repo, pr.number, pr.title).as_bytes())?;
         for assignee in &pr.assignees {
-            out.write_all(format!(" @{}", assignee).as_bytes())?;
+            let username = account_map.get(assignee).unwrap_or(assignee);
+            out.write_all(format!(" @{}", username).as_bytes())?;
         }
         out.write_all(b"\n")?;
     }
     Ok(())
 }
 
-fn write_issues_section(out: &mut dyn Write, github_issues: &[github::Issue]) -> Result<()> {
+fn write_issues_section(
+    out: &mut dyn Write,
+    github_issues: &[github::Issue],
+    account_map: &HashMap<String, String>,
+) -> Result<()> {
     out.write_all(b"\n## Assigned Issues with No Update in Past 24 Hours\n\n")?;
     for issue in github_issues {
         out.write_all(format!("* {}#{} {}", issue.repo, issue.number, issue.title).as_bytes())?;
         for assignee in &issue.assignees {
-            out.write_all(format!(" @{}", assignee).as_bytes())?;
+            let username = account_map.get(assignee).unwrap_or(assignee);
+            out.write_all(format!(" @{}", username).as_bytes())?;
         }
         out.write_all(b"\n")?;
     }
