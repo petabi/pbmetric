@@ -1,6 +1,6 @@
 [package]
 name = "pbmetric"
-version = "0.3.1"
+version = "0.3.2"
 description = """
 pbmetric collects metrics from various tools and services to help Petabi members improve productivity."""
 readme = "README.md"
