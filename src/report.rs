@@ -191,7 +191,15 @@ fn write_pull_request_section(
     }
     out.write_all(b"<h2>Pull Requests Under Review</h2>\n<ul>")?;
     for pr in pull_requests {
-        out.write_all(format!("<li>{}#{} {}", pr.repo, pr.number, pr.title).as_bytes())?;
+        out.write_all(
+            format!(
+                r#"<li><a href="https://github.com/petabi/{repo}/pull/{num}">{repo}#{num}</a> {}"#,
+                pr.title,
+                repo = pr.repo,
+                num = pr.number
+            )
+            .as_bytes(),
+        )?;
         for assignee in &pr.assignees {
             let username = account_map.get(assignee).unwrap_or(assignee);
             out.write_all(format!(" @{}", username).as_bytes())?;
@@ -208,7 +216,7 @@ fn write_issues_section(
 ) -> Result<()> {
     out.write_all(b"<h2>Assigned Issues with No Update in Past 24 Hours</h2>\n<ul>")?;
     for issue in github_issues {
-        out.write_all(format!("<li>{}#{} {}", issue.repo, issue.number, issue.title).as_bytes())?;
+        out.write_all(format!(r#"<li><a href="https://github.com/petabi/{repo}/issues/{num}">{repo}#{num}</a> {}"#, issue.title, repo = issue.repo, num = issue.number).as_bytes())?;
         for assignee in &issue.assignees {
             let username = account_map.get(assignee).unwrap_or(assignee);
             out.write_all(format!(" @{}", username).as_bytes())?;
