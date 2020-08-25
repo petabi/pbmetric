@@ -204,8 +204,8 @@ fn write_pull_request_section(
             let username = account_map.get(assignee).unwrap_or(assignee);
             out.write_all(format!(" @{}", username).as_bytes())?;
         }
-        out.write_all(b"</ul>\n")?;
     }
+    out.write_all(b"</ul>\n")?;
     Ok(())
 }
 
