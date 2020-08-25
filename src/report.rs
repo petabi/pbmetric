@@ -100,6 +100,7 @@ pub fn agenda<P: AsRef<Path>>(
         if *count == 0. {
             continue;
         }
+        let username = github_conf.account.get(*username).unwrap_or(username);
         out.write_all(format!("  - {}: {:.0}\n", username, count).as_bytes())?;
     }
 
