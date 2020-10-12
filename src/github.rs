@@ -90,20 +90,12 @@ impl Client {
                                 title: node.title,
                                 number: node.number,
                                 repo: repo.to_string(),
-                                assignees: if let Some(nodes) = node.assignees.nodes {
+                                assignees: node.assignees.nodes.map_or_else(Vec::new, |nodes| {
                                     nodes
                                         .into_iter()
-                                        .filter_map(|v| {
-                                            if let Some(node) = v {
-                                                Some(node.login)
-                                            } else {
-                                                None
-                                            }
-                                        })
+                                        .filter_map(|v| v.map(|node| node.login))
                                         .collect()
-                                } else {
-                                    Vec::new()
-                                },
+                                }),
                             });
                         }
                     }
@@ -144,31 +136,26 @@ impl Client {
                                     .map_or_else(|| "unknown".to_string(), |v| v.login);
                                 let created_at =
                                     chrono::DateTime::parse_from_rfc3339(&node.created_at)?;
-                                let labels = if let Some(labels) = node.labels {
-                                    if let Some(nodes) = labels.nodes {
+                                let labels = node.labels.map_or_else(Vec::new, |labels| {
+                                    labels.nodes.map_or_else(Vec::new, |nodes| {
                                         nodes
                                             .into_iter()
                                             .filter_map(|v| v.map(|v| v.name))
                                             .collect()
-                                    } else {
-                                        Vec::new()
-                                    }
-                                } else {
-                                    Vec::new()
-                                };
+                                    })
+                                });
                                 let closed_at = if let Some(closed_at) = node.closed_at {
                                     Some(chrono::DateTime::parse_from_rfc3339(&closed_at)?)
                                 } else {
                                     None
                                 };
-                                let assignees = if let Some(nodes) = node.assignees.nodes {
-                                    nodes
-                                        .into_iter()
-                                        .filter_map(|v| v.map(|v| v.login))
-                                        .collect()
-                                } else {
-                                    Vec::new()
-                                };
+                                let assignees =
+                                    node.assignees.nodes.map_or_else(Vec::new, |nodes| {
+                                        nodes
+                                            .into_iter()
+                                            .filter_map(|v| v.map(|v| v.login))
+                                            .collect()
+                                    });
                                 issues.push(IssueMetadata {
                                     author,
                                     labels,
@@ -294,30 +281,18 @@ impl Client {
                 if let Some(repository) = data.repository {
                     if let Some(nodes) = repository.pull_requests.nodes {
                         prs.extend(nodes.into_iter().filter_map(|v| {
-                            if let Some(node) = v {
-                                Some(PullRequest {
-                                    title: node.title,
-                                    number: node.number,
-                                    repo: repo.to_string(),
-                                    assignees: if let Some(nodes) = node.assignees.nodes {
-                                        nodes
-                                            .into_iter()
-                                            .filter_map(|v| {
-                                                if let Some(node) = v {
-                                                    Some(node.login)
-                                                } else {
-                                                    None
-                                                }
-                                            })
-                                            .collect()
-                                    } else {
-                                        Vec::new()
-                                    },
-                                })
-                            } else {
-                                None
-                            }
-                        }));
+                            v.map(|node| PullRequest {
+                                title: node.title,
+                                number: node.number,
+                                repo: repo.to_string(),
+                                assignees: node.assignees.nodes.map_or(Vec::new(), |nodes| {
+                                    nodes
+                                        .into_iter()
+                                        .filter_map(|v| v.map(|node| node.login))
+                                        .collect()
+                                }),
+                            })
+                        }))
                     }
                 }
             }
