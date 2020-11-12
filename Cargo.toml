@@ -16,7 +16,7 @@ clap = "2"
 chrono = "0.4"
 directories = "3"
 graphql_client = "0.9"
-lettre = "0.9.3"
+lettre = "0.9.5"
 lettre_email = "0.9.4"
 regex = "1"
 reqwest = { version = "0.10", features = ["blocking", "json"] }
