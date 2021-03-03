@@ -182,13 +182,13 @@ fn update<P: AsRef<Path>>(path: P, asof: &DateTime<Utc>, offline: bool) -> io::R
             return Err(io::Error::new(io::ErrorKind::Other, "git operation failed"));
         }
     }
-    let status = Command::new("git").args(&["checkout", "master"]).status()?;
+    let status = Command::new("git").args(&["checkout", "main"]).status()?;
     if !status.success() {
         return Err(io::Error::new(io::ErrorKind::Other, "git operation failed"));
     }
     if !offline {
         let status = Command::new("git")
-            .args(&["reset", "--hard", "origin/master"])
+            .args(&["reset", "--hard", "origin/main"])
             .status()?;
         if !status.success() {
             return Err(io::Error::new(io::ErrorKind::Other, "git operation failed"));
@@ -196,14 +196,7 @@ fn update<P: AsRef<Path>>(path: P, asof: &DateTime<Utc>, offline: bool) -> io::R
     }
     let before_arg = format!(r#"--before="{}""#, asof.to_rfc3339());
     let output = Command::new("git")
-        .args(&[
-            "rev-list",
-            "-n",
-            "1",
-            "--first-parent",
-            &before_arg,
-            "master",
-        ])
+        .args(&["rev-list", "-n", "1", "--first-parent", &before_arg, "main"])
         .output()?;
     let gitref = String::from_utf8(output.stdout).unwrap();
     let status = Command::new("git")
