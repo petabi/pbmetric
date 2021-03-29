@@ -53,7 +53,7 @@ impl Config {
 
 fn main() {
     let matches = App::new(APPLICATION)
-        .version(&crate_version!()[..])
+        .version(crate_version!())
         .arg(Arg::with_name("asof").long("asof").takes_value(true))
         .arg(Arg::with_name("epoch").long("epoch").takes_value(true))
         .arg(
