@@ -129,41 +129,38 @@ impl Client {
             if let Some(data) = body.data {
                 if let Some(repository) = data.repository {
                     if let Some(nodes) = repository.issues.nodes {
-                        for node in nodes {
-                            if let Some(node) = node {
-                                let author = node
-                                    .author
-                                    .map_or_else(|| "unknown".to_string(), |v| v.login);
-                                let created_at =
-                                    chrono::DateTime::parse_from_rfc3339(&node.created_at)?;
-                                let labels = node.labels.map_or_else(Vec::new, |labels| {
-                                    labels.nodes.map_or_else(Vec::new, |nodes| {
-                                        nodes
-                                            .into_iter()
-                                            .filter_map(|v| v.map(|v| v.name))
-                                            .collect()
-                                    })
-                                });
-                                let closed_at = if let Some(closed_at) = node.closed_at {
-                                    Some(chrono::DateTime::parse_from_rfc3339(&closed_at)?)
-                                } else {
-                                    None
-                                };
-                                let assignees =
-                                    node.assignees.nodes.map_or_else(Vec::new, |nodes| {
-                                        nodes
-                                            .into_iter()
-                                            .filter_map(|v| v.map(|v| v.login))
-                                            .collect()
-                                    });
-                                issues.push(IssueMetadata {
-                                    author,
-                                    labels,
-                                    assignees,
-                                    created_at,
-                                    closed_at,
-                                });
-                            }
+                        for node in nodes.into_iter().flatten() {
+                            let author = node
+                                .author
+                                .map_or_else(|| "unknown".to_string(), |v| v.login);
+                            let created_at =
+                                chrono::DateTime::parse_from_rfc3339(&node.created_at)?;
+                            let labels = node.labels.map_or_else(Vec::new, |labels| {
+                                labels.nodes.map_or_else(Vec::new, |nodes| {
+                                    nodes
+                                        .into_iter()
+                                        .filter_map(|v| v.map(|v| v.name))
+                                        .collect()
+                                })
+                            });
+                            let closed_at = if let Some(closed_at) = node.closed_at {
+                                Some(chrono::DateTime::parse_from_rfc3339(&closed_at)?)
+                            } else {
+                                None
+                            };
+                            let assignees = node.assignees.nodes.map_or_else(Vec::new, |nodes| {
+                                nodes
+                                    .into_iter()
+                                    .filter_map(|v| v.map(|v| v.login))
+                                    .collect()
+                            });
+                            issues.push(IssueMetadata {
+                                author,
+                                labels,
+                                assignees,
+                                created_at,
+                                closed_at,
+                            });
                         }
                     }
                 }
@@ -198,58 +195,55 @@ impl Client {
             if let Some(data) = body.data {
                 if let Some(repository) = data.repository {
                     if let Some(nodes) = repository.issues.nodes {
-                        for node in nodes {
-                            if let Some(node) = node {
-                                let created_at =
-                                    chrono::DateTime::parse_from_rfc3339(&node.created_at)?;
-                                if *since <= created_at {
-                                    let author = node
-                                        .author
-                                        .map_or_else(|| "unknown".to_string(), |v| v.login);
-                                    let stat = counter.entry(author).or_insert((0, 0, 0.0, 0, 0.0));
-                                    if let Some(labels) = node.labels {
-                                        if let Some(nodes) = labels.nodes {
-                                            let is_bug = nodes
-                                                .into_iter()
-                                                .any(|v| v.map_or(false, |v| v.name == "bug"));
-                                            if is_bug {
-                                                stat.1 += 1;
-                                            }
-                                        } else {
-                                            stat.0 += 1;
+                        for node in nodes.into_iter().flatten() {
+                            let created_at =
+                                chrono::DateTime::parse_from_rfc3339(&node.created_at)?;
+                            if *since <= created_at {
+                                let author = node
+                                    .author
+                                    .map_or_else(|| "unknown".to_string(), |v| v.login);
+                                let stat = counter.entry(author).or_insert((0, 0, 0.0, 0, 0.0));
+                                if let Some(labels) = node.labels {
+                                    if let Some(nodes) = labels.nodes {
+                                        let is_bug = nodes
+                                            .into_iter()
+                                            .any(|v| v.map_or(false, |v| v.name == "bug"));
+                                        if is_bug {
+                                            stat.1 += 1;
                                         }
                                     } else {
                                         stat.0 += 1;
-                                    };
-
-                                    if *recent_since < created_at {
-                                        stat.3 += 1;
                                     }
-                                }
-                                if let Some(closed_at) = node.closed_at {
-                                    let closed_at =
-                                        chrono::DateTime::parse_from_rfc3339(&closed_at)?;
-                                    if let Some(nodes) = node.assignees.nodes {
-                                        let mut total_assignees = 0.0;
-                                        for node in &nodes {
-                                            if node.is_some() {
-                                                total_assignees += 1.0
-                                            }
-                                        }
-                                        for node in nodes {
-                                            let node = if let Some(node) = node {
-                                                node
-                                            } else {
-                                                continue;
-                                            };
-                                            let stat = counter
-                                                .entry(node.login)
-                                                .or_insert((0, 0, 0.0, 0, 0.0));
-                                            stat.2 += 1.0 / total_assignees;
+                                } else {
+                                    stat.0 += 1;
+                                };
 
-                                            if *recent_since < closed_at {
-                                                stat.4 += 1.0 / total_assignees;
-                                            }
+                                if *recent_since < created_at {
+                                    stat.3 += 1;
+                                }
+                            }
+                            if let Some(closed_at) = node.closed_at {
+                                let closed_at = chrono::DateTime::parse_from_rfc3339(&closed_at)?;
+                                if let Some(nodes) = node.assignees.nodes {
+                                    let mut total_assignees = 0.0;
+                                    for node in &nodes {
+                                        if node.is_some() {
+                                            total_assignees += 1.0
+                                        }
+                                    }
+                                    for node in nodes {
+                                        let node = if let Some(node) = node {
+                                            node
+                                        } else {
+                                            continue;
+                                        };
+                                        let stat = counter
+                                            .entry(node.login)
+                                            .or_insert((0, 0, 0.0, 0, 0.0));
+                                        stat.2 += 1.0 / total_assignees;
+
+                                        if *recent_since < closed_at {
+                                            stat.4 += 1.0 / total_assignees;
                                         }
                                     }
                                 }
@@ -322,22 +316,20 @@ impl Client {
             if let Some(data) = body.data {
                 if let Some(repository) = data.repository {
                     if let Some(nodes) = repository.pull_requests.nodes {
-                        for node in nodes {
-                            if let Some(node) = node {
-                                let login = if let Some(author) = node.author {
-                                    author.login
-                                } else {
-                                    continue;
-                                };
-                                let created_at =
-                                    chrono::DateTime::parse_from_rfc3339(&node.created_at)?;
-                                if created_at < *since {
-                                    break;
-                                }
-                                let mut count = prs.entry(login).or_insert((0, 0));
-                                count.0 += 1;
-                                count.1 += node.comments.total_count;
+                        for node in nodes.into_iter().flatten() {
+                            let login = if let Some(author) = node.author {
+                                author.login
+                            } else {
+                                continue;
+                            };
+                            let created_at =
+                                chrono::DateTime::parse_from_rfc3339(&node.created_at)?;
+                            if created_at < *since {
+                                break;
                             }
+                            let mut count = prs.entry(login).or_insert((0, 0));
+                            count.0 += 1;
+                            count.1 += node.comments.total_count;
                         }
                     }
                 }
