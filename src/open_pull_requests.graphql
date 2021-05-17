@@ -4,6 +4,18 @@ query OpenPullRequests($owner: String!, $name: String!) {
       nodes {
         title
         number
+        reviewRequests(last: 10) {
+          edges {
+            node {
+              requestedReviewer {
+                __typename
+                ... on User {
+                  login
+                }
+              }
+            }
+          }
+        }
         assignees(last: 10) {
           nodes {
             login

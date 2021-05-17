@@ -200,6 +200,10 @@ fn write_pull_request_section(
             )
             .as_bytes(),
         )?;
+        for reviewers in &pr.reviewers {
+            let username = account_map.get(reviewers).unwrap_or(reviewers);
+            out.write_all(format!(" @{}", username).as_bytes())?;
+        }
         for assignee in &pr.assignees {
             let username = account_map.get(assignee).unwrap_or(assignee);
             out.write_all(format!(" @{}", username).as_bytes())?;

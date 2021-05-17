@@ -279,6 +279,24 @@ impl Client {
                                 title: node.title,
                                 number: node.number,
                                 repo: repo.to_string(),
+                                reviewers: node.review_requests.map_or(Vec::new(), |rr| {
+                                    rr.edges.map_or(Vec::new(), |edges| {
+                                        edges
+                                            .into_iter()
+                                            .filter_map(|edge| {
+                                                edge.and_then(|edge| {
+                                                    edge.node.and_then(|node| {
+                                                        node.requested_reviewer
+                                                            .and_then(|reviewer| match reviewer {
+                                                                open_pull_requests::OpenPullRequestsRepositoryPullRequestsNodesReviewRequestsEdgesNodeRequestedReviewer::User(u) => Some(u.login),
+                                                                _ => None,
+                                                            })
+                                                    })
+                                                })
+                                            })
+                                            .collect()
+                                    })
+                                }),
                                 assignees: node.assignees.nodes.map_or(Vec::new(), |nodes| {
                                     nodes
                                         .into_iter()
@@ -361,5 +379,6 @@ pub struct PullRequest {
     pub title: String,
     pub number: i64,
     pub repo: String,
+    pub reviewers: Vec<String>,
     pub assignees: Vec<String>,
 }
