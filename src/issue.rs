@@ -28,15 +28,13 @@ pub fn individual_stats(
             } else {
                 continue;
             };
+
+            let entry = stats
+                .entry(author.clone())
+                .or_insert_with(IndividualStats::default);
             if issue.labels.contains(&"bug".to_string()) {
-                let entry = stats
-                    .entry(author.clone())
-                    .or_insert_with(IndividualStats::default);
                 entry.bugs_reported += 1;
             } else {
-                let entry = stats
-                    .entry(author.clone())
-                    .or_insert_with(IndividualStats::default);
                 entry.issues_opened += 1;
             }
         }
