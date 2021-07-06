@@ -5,7 +5,7 @@ improve productivity.
 
 ## Minimum Supported Rust Version
 
-This crate is guaranteed to compile on Rust 1.46 and later.
+This crate is guaranteed to compile on Rust 1.51 and later.
 
 ## License
 
