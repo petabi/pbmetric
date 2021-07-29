@@ -47,7 +47,7 @@ pub fn agenda<P: AsRef<Path>>(
         None => &quarter_ago,
     };
 
-    let total_loc = repo_loc(repo_root.as_ref(), repos, &since, asof);
+    let total_loc = repo_loc(repo_root.as_ref(), repos, since, asof);
 
     let github_api = github::Client::new(&github_conf.token);
 
@@ -59,10 +59,10 @@ pub fn agenda<P: AsRef<Path>>(
         write_issues_section(out, &github_issues, &github_conf.account)?;
     }
 
-    let issue_metadata = github_api.issue_metadata_since(&github_conf.repositories, &since)?;
+    let issue_metadata = github_api.issue_metadata_since(&github_conf.repositories, since)?;
     let week_ago = *asof - Duration::weeks(1);
     let github_issue_stats =
-        github_api.recent_issues_per_login(&github_conf.repositories, &since, &week_ago)?;
+        github_api.recent_issues_per_login(&github_conf.repositories, since, &week_ago)?;
     let created_count: usize = github_issue_stats.values().map(|v| v.3).sum();
     let authors = github_issue_stats
         .iter()
@@ -109,14 +109,14 @@ pub fn agenda<P: AsRef<Path>>(
     out.write_all(b"</ul>\n</ul>\n")?;
 
     let pull_requests =
-        github_api.merged_pull_requests_per_login(&github_conf.repositories, &since)?;
+        github_api.merged_pull_requests_per_login(&github_conf.repositories, since)?;
     out.write_all(b"\n<h2>Individual Statistics for the Past 90 Days</h2>\n<ul>")?;
     let mut stats = individual_stats(
         &issue_metadata,
         &pull_requests,
         &github_conf.account,
-        &since,
-        &asof,
+        since,
+        asof,
     );
     for (email, loc) in &total_loc {
         let username = match email_map.get(email) {
@@ -129,7 +129,7 @@ pub fn agenda<P: AsRef<Path>>(
         entry.lines_contributed += loc;
     }
     for (username, stats) in stats {
-        print_individual_stat(out, &username, &stats, &since, asof)?;
+        print_individual_stat(out, &username, &stats, since, asof)?;
     }
     out.write_all(b"</ul>\n")?;
     print_unknown_emails(out, &total_loc, email_map)?;

@@ -166,7 +166,7 @@ fn clone<P: AsRef<Path>>(url: &str, path: P) -> io::Result<()> {
             ))
         }
     };
-    let status = Command::new("git").args(&["clone", url, &path]).status()?;
+    let status = Command::new("git").args(&["clone", url, path]).status()?;
     if !status.success() {
         return Err(io::Error::new(io::ErrorKind::Other, "git operation failed"));
     }
