@@ -228,7 +228,7 @@ impl Client {
                                     let mut total_assignees = 0.0;
                                     for node in &nodes {
                                         if node.is_some() {
-                                            total_assignees += 1.0
+                                            total_assignees += 1.0;
                                         }
                                     }
                                     for node in nodes {
@@ -304,7 +304,7 @@ impl Client {
                                         .collect()
                                 }),
                             })
-                        }))
+                        }));
                     }
                 }
             }
