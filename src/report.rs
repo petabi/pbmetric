@@ -10,13 +10,15 @@ use std::io::Write;
 use std::path::Path;
 use std::process::exit;
 
-const EXCLUDE_DEFAULT: [&str; 7] = [
+const EXCLUDE_DEFAULT: [&str; 9] = [
     r#"^\.git/"#,
     r#"(^|/)Cargo\.lock$"#,
     r#"\.dat$"#,
     r#"\.log$"#,
     r#"\.pcap$"#,
     r#"\.png$"#,
+    r#"\.woff$"#,
+    r#"\.woff2$"#,
     r#"^LICENSE$"#,
 ];
 
