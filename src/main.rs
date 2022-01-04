@@ -54,10 +54,10 @@ impl Config {
 fn main() {
     let matches = App::new(APPLICATION)
         .version(crate_version!())
-        .arg(Arg::with_name("asof").long("asof").takes_value(true))
-        .arg(Arg::with_name("epoch").long("epoch").takes_value(true))
+        .arg(Arg::new("asof").long("asof").takes_value(true))
+        .arg(Arg::new("epoch").long("epoch").takes_value(true))
         .arg(
-            Arg::with_name("offline")
+            Arg::new("offline")
                 .long("offline")
                 .help("Skips updating repositories"),
         )
