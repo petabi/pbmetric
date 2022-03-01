@@ -5,7 +5,7 @@ mod report;
 
 use crate::report::{agenda, GithubConfig};
 use chrono::{DateTime, FixedOffset};
-use clap::{crate_version, App, Arg};
+use clap::{crate_version, Arg, Command};
 use directories::ProjectDirs;
 use lettre::smtp::authentication::IntoCredentials;
 use lettre::{SmtpClient, Transport};
@@ -52,7 +52,7 @@ impl Config {
 }
 
 fn main() {
-    let matches = App::new(APPLICATION)
+    let matches = Command::new(APPLICATION)
         .version(crate_version!())
         .arg(Arg::new("asof").long("asof").takes_value(true))
         .arg(Arg::new("epoch").long("epoch").takes_value(true))
