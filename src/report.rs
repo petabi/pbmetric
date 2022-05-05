@@ -188,6 +188,10 @@ fn write_pull_request_section(
     pull_requests: &[github::PullRequest],
     account_map: &HashMap<String, String>,
 ) -> Result<()> {
+    let pull_requests = pull_requests
+        .iter()
+        .filter(|pr| !pr.title.starts_with("[WIP]"))
+        .collect::<Vec<_>>();
     if pull_requests.is_empty() {
         return Ok(());
     }
