@@ -70,26 +70,28 @@ fn main() {
         exit(1);
     };
     let config = load_config(dirs.config_dir());
-    let asof =
-        matches.value_of("asof").map_or_else(chrono::Utc::now, |v| {
-            match DateTime::<FixedOffset>::parse_from_rfc3339(v) {
+    let asof = matches
+        .get_one::<String>("asof")
+        .map_or_else(
+            chrono::Utc::now,
+            |v| match DateTime::<FixedOffset>::parse_from_rfc3339(v) {
                 Ok(asof) => asof.with_timezone(&chrono::Utc),
                 Err(e) => {
                     eprintln!("{}: {}", e, v);
                     exit(1);
                 }
-            }
-        });
+            },
+        );
     let epoch =
-        matches
-            .value_of("epoch")
-            .map(|v| match DateTime::<FixedOffset>::parse_from_rfc3339(v) {
+        matches.get_one::<String>("epoch").map(
+            |v| match DateTime::<FixedOffset>::parse_from_rfc3339(v) {
                 Ok(epoch) => epoch.with_timezone(&chrono::Utc),
                 Err(e) => {
                     eprintln!("{}: {}", e, v);
                     exit(1);
                 }
-            });
+            },
+        );
 
     let repo_dir = match repo_dir(dirs.cache_dir()) {
         Ok(dir) => dir,
@@ -110,7 +112,7 @@ fn main() {
         &repo_dir,
         &config.repos,
         &asof,
-        matches.is_present("offline"),
+        matches.contains_id("offline"),
     ) {
         eprintln!("cannot update git repositories: {}", e);
         if let Err(e) = env::set_current_dir(orig_dir) {
