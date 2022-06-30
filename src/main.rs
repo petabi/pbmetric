@@ -7,9 +7,9 @@ use crate::report::{agenda, GithubConfig};
 use chrono::{DateTime, FixedOffset};
 use clap::{crate_version, Arg, Command};
 use directories::ProjectDirs;
-use lettre::smtp::authentication::IntoCredentials;
-use lettre::{SmtpClient, Transport};
-use lettre_email::EmailBuilder;
+use lettre::message::SinglePart;
+use lettre::Message;
+use lettre::{transport::smtp::authentication::Credentials, SmtpTransport, Transport};
 use serde::Deserialize;
 use std::collections::BTreeMap;
 use std::env;
@@ -138,20 +138,19 @@ fn main() {
         exit(1);
     }
 
-    let email = EmailBuilder::new()
-        .to(config.mail.recipient.as_str())
-        .from(config.mail.username.as_str())
+    let part = SinglePart::html(body);
+    let msg = Message::builder()
+        .to(config.mail.recipient.parse().unwrap())
+        .from(config.mail.username.parse().unwrap())
         .subject(format!("Project Snapshot {}", chrono::offset::Utc::today()))
-        .html(String::from_utf8(body).unwrap())
-        .build()
-        .unwrap()
-        .into();
-    let credentials = (config.mail.username, config.mail.password).into_credentials();
-    let mut client = SmtpClient::new_simple(&config.mail.server)
+        .singlepart(part)
+        .unwrap();
+    let credentials = Credentials::new(config.mail.username, config.mail.password);
+    let sender = SmtpTransport::starttls_relay(&config.mail.server)
         .unwrap()
         .credentials(credentials)
-        .transport();
-    let _result = client.send(email);
+        .build();
+    let _result = sender.send(&msg);
 }
 
 fn load_config<P: AsRef<Path>>(dir: P) -> Config {
