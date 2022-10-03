@@ -7,8 +7,8 @@ jobs:
     runs-on: ${{ matrix.os }}
     strategy:
       matrix:
-        os: [ubuntu-latest, macOS-latest]
-        rust: [stable, 1.56.1]
+        os: [ubuntu-latest, macos-latest]
+        rust: [stable, 1.60.0]
 
     steps:
     - name: Install Rust

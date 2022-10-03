@@ -54,8 +54,8 @@ impl Config {
 fn main() {
     let matches = Command::new(APPLICATION)
         .version(crate_version!())
-        .arg(Arg::new("asof").long("asof").takes_value(true))
-        .arg(Arg::new("epoch").long("epoch").takes_value(true))
+        .arg(Arg::new("asof").long("asof").num_args(1))
+        .arg(Arg::new("epoch").long("epoch").num_args(1))
         .arg(
             Arg::new("offline")
                 .long("offline")
