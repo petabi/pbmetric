@@ -142,7 +142,10 @@ fn main() {
     let msg = Message::builder()
         .to(config.mail.recipient.parse().unwrap())
         .from(config.mail.username.parse().unwrap())
-        .subject(format!("Project Snapshot {}", chrono::offset::Utc::today()))
+        .subject(format!(
+            "Project Snapshot {}",
+            chrono::offset::Utc::now().date_naive()
+        ))
         .singlepart(part)
         .unwrap();
     let credentials = Credentials::new(config.mail.username, config.mail.password);
