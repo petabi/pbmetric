@@ -81,7 +81,7 @@ pub fn agenda<P: AsRef<Path>>(
         .collect::<BTreeMap<String, f32>>();
 
     out.write_all(b"<h2>Changes in the Past Week</h2>\n<ul>\n")?;
-    out.write_all(format!("<li>Created: {}\n<ul>\n", created_count).as_bytes())?;
+    out.write_all(format!("<li>Created: {created_count}\n<ul>\n").as_bytes())?;
     let mut authors = authors
         .iter()
         .map(|(username, count)| (*count, username))
@@ -92,10 +92,10 @@ pub fn agenda<P: AsRef<Path>>(
             continue;
         }
         let username = github_conf.account.get(*username).unwrap_or(username);
-        out.write_all(format!("<li>{}: {}\n", username, count).as_bytes())?;
+        out.write_all(format!("<li>{username}: {count}\n").as_bytes())?;
     }
     out.write_all(b"</ul>\n")?;
-    out.write_all(format!("<li>Completed: {}\n<ul>\n", closed_count).as_bytes())?;
+    out.write_all(format!("<li>Completed: {closed_count}\n<ul>\n").as_bytes())?;
     let mut assignees = assignees
         .iter()
         .map(|(username, count)| (*count, username))
@@ -106,7 +106,7 @@ pub fn agenda<P: AsRef<Path>>(
             continue;
         }
         let username = github_conf.account.get(*username).unwrap_or(username);
-        out.write_all(format!("<li>{}: {:.0}\n", username, count).as_bytes())?;
+        out.write_all(format!("<li>{username}: {count:.0}\n").as_bytes())?;
     }
     out.write_all(b"</ul>\n</ul>\n")?;
 
@@ -159,7 +159,7 @@ fn repo_loc(
     let mut path = root.to_path_buf();
     for (name, repo) in repos {
         path.push(name);
-        println!("Scanning {}", name);
+        println!("Scanning {name}");
         let mut exclude = EXCLUDE_DEFAULT
             .iter()
             .map(|e| (*e).to_string())
@@ -170,7 +170,7 @@ fn repo_loc(
         let blame_stats = match blame_stats(&path, start_date, end_date, exclude) {
             Ok(stats) => stats,
             Err(e) => {
-                eprintln!("cannot scan repositories: {}", e);
+                eprintln!("cannot scan repositories: {e}");
                 exit(1);
             }
         };
@@ -208,11 +208,11 @@ fn write_pull_request_section(
         )?;
         for reviewers in &pr.reviewers {
             let username = account_map.get(reviewers).unwrap_or(reviewers);
-            out.write_all(format!(" @{}", username).as_bytes())?;
+            out.write_all(format!(" @{username}").as_bytes())?;
         }
         for assignee in &pr.assignees {
             let username = account_map.get(assignee).unwrap_or(assignee);
-            out.write_all(format!(" @{}", username).as_bytes())?;
+            out.write_all(format!(" @{username}").as_bytes())?;
         }
     }
     out.write_all(b"</ul>\n")?;
@@ -229,7 +229,7 @@ fn write_issues_section(
         out.write_all(format!(r#"<li><a href="https://github.com/petabi/{repo}/issues/{num}">{repo}#{num}</a> {}"#, issue.title, repo = issue.repo, num = issue.number).as_bytes())?;
         for assignee in &issue.assignees {
             let username = account_map.get(assignee).unwrap_or(assignee);
-            out.write_all(format!(" @{}", username).as_bytes())?;
+            out.write_all(format!(" @{username}").as_bytes())?;
         }
         out.write_all(b"\n")?;
     }
@@ -246,7 +246,7 @@ fn print_individual_stat(
     asof: &DateTime<Utc>,
 ) -> Result<()> {
     let days = (*asof - *since).num_days();
-    out.write_all(format!("<li>{}\n<ul>\n", username).as_bytes())?;
+    out.write_all(format!("<li>{username}\n<ul>\n").as_bytes())?;
     out.write_all(
         format!(
             "<li>{:.3} issues completed per day\n",
@@ -303,7 +303,7 @@ fn print_unknown_emails(
         if email_map.contains_key(email) {
             continue;
         }
-        buf.write_all(format!("<li>{}: {} lines contributed\n", email, loc).as_bytes())?;
+        buf.write_all(format!("<li>{email}: {loc} lines contributed\n").as_bytes())?;
     }
     if buf.is_empty() {
         return Ok(false);

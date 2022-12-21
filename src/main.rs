@@ -77,7 +77,7 @@ fn main() {
             |v| match DateTime::<FixedOffset>::parse_from_rfc3339(v) {
                 Ok(asof) => asof.with_timezone(&chrono::Utc),
                 Err(e) => {
-                    eprintln!("{}: {}", e, v);
+                    eprintln!("{e}: {v}");
                     exit(1);
                 }
             },
@@ -87,7 +87,7 @@ fn main() {
             |v| match DateTime::<FixedOffset>::parse_from_rfc3339(v) {
                 Ok(epoch) => epoch.with_timezone(&chrono::Utc),
                 Err(e) => {
-                    eprintln!("{}: {}", e, v);
+                    eprintln!("{e}: {v}");
                     exit(1);
                 }
             },
@@ -96,7 +96,7 @@ fn main() {
     let repo_dir = match repo_dir(dirs.cache_dir()) {
         Ok(dir) => dir,
         Err(e) => {
-            eprintln!("cannot create the repository directory: {}", e);
+            eprintln!("cannot create the repository directory: {e}");
             exit(1);
         }
     };
@@ -104,7 +104,7 @@ fn main() {
     let orig_dir = match env::current_dir() {
         Ok(dir) => dir,
         Err(e) => {
-            eprintln!("cannot read the current directory: {}", e);
+            eprintln!("cannot read the current directory: {e}");
             exit(1);
         }
     };
@@ -114,9 +114,9 @@ fn main() {
         &asof,
         matches.contains_id("offline"),
     ) {
-        eprintln!("cannot update git repositories: {}", e);
+        eprintln!("cannot update git repositories: {e}");
         if let Err(e) = env::set_current_dir(orig_dir) {
-            eprintln!("cannot restore the working directory: {}", e);
+            eprintln!("cannot restore the working directory: {e}");
         }
         exit(1);
     }
@@ -130,11 +130,11 @@ fn main() {
         &asof,
         &epoch,
     ) {
-        eprintln!("cannot create an agenda: {}", e);
+        eprintln!("cannot create an agenda: {e}");
         exit(1);
     }
     if let Err(e) = env::set_current_dir(orig_dir) {
-        eprintln!("cannot restore the working directory: {}", e);
+        eprintln!("cannot restore the working directory: {e}");
         exit(1);
     }
 
@@ -166,7 +166,7 @@ fn load_config<P: AsRef<Path>>(dir: P) -> Config {
             if e.kind() == io::ErrorKind::NotFound {
                 Config::default()
             } else {
-                eprintln!("cannot load {}: {}", path.display(), e);
+                eprintln!("cannot load {}: {e}", path.display());
                 exit(1);
             }
         }

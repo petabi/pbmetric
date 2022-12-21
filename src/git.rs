@@ -48,7 +48,7 @@ where
         Err(e) => {
             return Err(io::Error::new(
                 io::ErrorKind::InvalidInput,
-                format!("invalid exclude pattern: {}", e),
+                format!("invalid exclude pattern: {e}"),
             ))
         }
     };
@@ -62,7 +62,7 @@ where
             Err(e) => {
                 return Err(io::Error::new(
                     io::ErrorKind::Other,
-                    format!("cannot traverse repo: {}", e),
+                    format!("cannot traverse repo: {e}"),
                 ))
             }
         };
@@ -86,7 +86,7 @@ where
         if exclude.is_match(pathstr) {
             continue;
         }
-        println!("  {}", pathstr);
+        println!("  {pathstr}");
         let blameout = blame(pathstr)?;
         for (email, loc) in parse_blame(&blameout, since, asof) {
             let entry = total_loc.entry(email).or_insert(0);
@@ -117,13 +117,13 @@ fn parse_blame(blame: &str, since: &DateTime<Utc>, asof: &DateTime<Utc>) -> Hash
         let email_start = if let Some(cur) = line.find("(<") {
             cur + 2
         } else {
-            eprintln!("Warning: cannot find where email address begins: {}", line);
+            eprintln!("Warning: cannot find where email address begins: {line}");
             continue;
         };
         let email_end = if let Some(cur) = line[email_start + 1..].find('>') {
             cur + email_start + 1
         } else {
-            eprintln!("Warning: cannot find where email address ends: {}", line);
+            eprintln!("Warning: cannot find where email address ends: {line}");
             continue;
         };
         let email = &line[email_start..email_end];
@@ -131,18 +131,18 @@ fn parse_blame(blame: &str, since: &DateTime<Utc>, asof: &DateTime<Utc>) -> Hash
             if let Some(cur) = line[email_end + 1..=cur + email_end].rfind(' ') {
                 cur + email_end + 1
             } else {
-                eprintln!("Warning: cannot find where timestamp ends: {}", line);
+                eprintln!("Warning: cannot find where timestamp ends: {line}");
                 continue;
             }
         } else {
-            eprintln!("Warning: cannot find where blame info ends: {}", line);
+            eprintln!("Warning: cannot find where blame info ends: {line}");
             continue;
         };
         let timestamp_str = line[email_end + 1..timestamp_end].trim();
         let timestamp = if let Ok(timestamp) = DateTime::parse_from_str(timestamp_str, "%F %T %z") {
             timestamp
         } else {
-            eprintln!(r#"Warning: invalid timestamp format: "{}""#, timestamp_str);
+            eprintln!(r#"Warning: invalid timestamp format: "{timestamp_str}""#);
             continue;
         };
         if timestamp < since.with_timezone(&timestamp.timezone())
