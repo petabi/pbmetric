@@ -8,6 +8,7 @@ homepage = "https://github.com/petabi/pbmetric"
 repository = "https://github.com/petabi/pbmetric"
 license = "Apache-2.0"
 edition = "2021"
+rust-version = "1.64.0"
 
 [dependencies]
 anyhow = "1"
