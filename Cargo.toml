@@ -14,7 +14,7 @@ rust-version = "1.64.0"
 anyhow = "1"
 clap = { version = "4", features = ["cargo"] }
 chrono = "0.4"
-directories = "4"
+directories = "5"
 graphql_client = "0.12"
 lettre = "0.10"
 regex = "1"
