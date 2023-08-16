@@ -345,7 +345,7 @@ impl Client {
                             if created_at < *since {
                                 break;
                             }
-                            let mut count = prs.entry(login).or_insert((0, 0));
+                            let count = prs.entry(login).or_insert((0, 0));
                             count.0 += 1;
                             count.1 += node.comments.total_count;
                         }
