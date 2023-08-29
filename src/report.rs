@@ -11,15 +11,15 @@ use std::path::Path;
 use std::process::exit;
 
 const EXCLUDE_DEFAULT: [&str; 9] = [
-    r#"^\.git/"#,
-    r#"(^|/)Cargo\.lock$"#,
-    r#"\.dat$"#,
-    r#"\.log$"#,
-    r#"\.pcap$"#,
-    r#"\.png$"#,
-    r#"\.woff$"#,
-    r#"\.woff2$"#,
-    r#"^LICENSE$"#,
+    r"^\.git/",
+    r"(^|/)Cargo\.lock$",
+    r"\.dat$",
+    r"\.log$",
+    r"\.pcap$",
+    r"\.png$",
+    r"\.woff$",
+    r"\.woff2$",
+    r"^LICENSE$",
 ];
 
 #[derive(Default, Deserialize)]
