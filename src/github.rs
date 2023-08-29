@@ -76,9 +76,7 @@ impl Client {
                 if let Some(repository) = data.repository {
                     if let Some(nodes) = repository.issues.nodes {
                         for node in nodes {
-                            let node = if let Some(node) = node {
-                                node
-                            } else {
+                            let Some(node) = node else {
                                 continue;
                             };
                             let updated_at =
@@ -232,9 +230,7 @@ impl Client {
                                         }
                                     }
                                     for node in nodes {
-                                        let node = if let Some(node) = node {
-                                            node
-                                        } else {
+                                        let Some(node) = node else {
                                             continue;
                                         };
                                         let stat = counter

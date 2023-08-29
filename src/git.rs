@@ -139,9 +139,7 @@ fn parse_blame(blame: &str, since: &DateTime<Utc>, asof: &DateTime<Utc>) -> Hash
             continue;
         };
         let timestamp_str = line[email_end + 1..timestamp_end].trim();
-        let timestamp = if let Ok(timestamp) = DateTime::parse_from_str(timestamp_str, "%F %T %z") {
-            timestamp
-        } else {
+        let Ok(timestamp) = DateTime::parse_from_str(timestamp_str, "%F %T %z") else {
             eprintln!(r#"Warning: invalid timestamp format: "{timestamp_str}""#);
             continue;
         };
@@ -157,14 +155,11 @@ fn parse_blame(blame: &str, since: &DateTime<Utc>, asof: &DateTime<Utc>) -> Hash
 }
 
 fn clone<P: AsRef<Path>>(url: &str, path: P) -> io::Result<()> {
-    let path = match path.as_ref().to_str() {
-        Some(path) => path,
-        None => {
-            return Err(io::Error::new(
-                io::ErrorKind::InvalidInput,
-                "invalid repository path",
-            ))
-        }
+    let Some(path) = path.as_ref().to_str() else {
+        return Err(io::Error::new(
+            io::ErrorKind::InvalidInput,
+            "invalid repository path",
+        ));
     };
     let status = Command::new("git").args(["clone", url, path]).status()?;
     if !status.success() {

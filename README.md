@@ -3,10 +3,6 @@
 pbmetric collects metrics from various tools and services to help Petabi members
 improve productivity.
 
-## Minimum Supported Rust Version
-
-This crate is guaranteed to compile on Rust 1.64 and later.
-
 ## License
 
 Copyright 2019-2023 Petabi, Inc.

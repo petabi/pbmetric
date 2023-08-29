@@ -121,9 +121,8 @@ pub fn agenda<P: AsRef<Path>>(
         asof,
     );
     for (email, loc) in &total_loc {
-        let username = match email_map.get(email) {
-            Some(username) => username,
-            None => continue,
+        let Some(username) = email_map.get(email) else {
+            continue;
         };
         let entry = stats
             .entry(username.to_string())

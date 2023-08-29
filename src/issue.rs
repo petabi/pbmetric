@@ -23,9 +23,7 @@ pub fn individual_stats(
     let mut stats = BTreeMap::new();
     for issue in issues {
         if *since < issue.created_at && issue.created_at < *asof {
-            let author = if let Some(author) = account_map.get(&issue.author) {
-                author
-            } else {
+            let Some(author) = account_map.get(&issue.author) else {
                 continue;
             };
 
@@ -41,9 +39,7 @@ pub fn individual_stats(
         if let Some(closed_at) = issue.closed_at {
             if *since < closed_at && closed_at < *asof {
                 for assignee in &issue.assignees {
-                    let id = if let Some(id) = account_map.get(assignee) {
-                        id
-                    } else {
+                    let Some(id) = account_map.get(assignee) else {
                         continue;
                     };
                     let entry = stats
@@ -55,9 +51,7 @@ pub fn individual_stats(
         }
     }
     for (login, count) in pull_requests {
-        let author = if let Some(author) = account_map.get(login) {
-            author
-        } else {
+        let Some(author) = account_map.get(login) else {
             continue;
         };
         let entry = stats

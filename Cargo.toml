@@ -8,7 +8,7 @@ homepage = "https://github.com/petabi/pbmetric"
 repository = "https://github.com/petabi/pbmetric"
 license = "Apache-2.0"
 edition = "2021"
-rust-version = "1.64.0"
+rust-version = "1.70.0"
 
 [dependencies]
 anyhow = "1"
@@ -19,6 +19,6 @@ graphql_client = "0.13"
 lettre = "0.10"
 regex = "1"
 reqwest = { version = "0.11", features = ["blocking", "json"] }
-serde = { version = "1",  features = ["derive"] }
+serde = { version = "1", features = ["derive"] }
 toml = "0.7"
 walkdir = "2"

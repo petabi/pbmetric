@@ -63,9 +63,7 @@ fn main() {
         )
         .get_matches();
 
-    let dirs = if let Some(dirs) = ProjectDirs::from(QUALIFIER, ORGANIZATION, APPLICATION) {
-        dirs
-    } else {
+    let Some(dirs) = ProjectDirs::from(QUALIFIER, ORGANIZATION, APPLICATION) else {
         eprintln!("no valid home directory path");
         exit(1);
     };
