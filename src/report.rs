@@ -124,9 +124,7 @@ pub fn agenda<P: AsRef<Path>>(
         let Some(username) = email_map.get(email) else {
             continue;
         };
-        let entry = stats
-            .entry(username.to_string())
-            .or_insert_with(IndividualStats::default);
+        let entry = stats.entry(username.to_string()).or_default();
         entry.lines_contributed += loc;
     }
     for (username, stats) in stats {
