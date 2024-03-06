@@ -81,7 +81,10 @@ impl Client {
                             };
                             let updated_at =
                                 chrono::DateTime::parse_from_rfc3339(&node.updated_at)?;
-                            if updated_at > *asof - chrono::Duration::days(1) {
+                            if updated_at
+                                > *asof
+                                    - chrono::Duration::try_days(1).expect("valid constant value")
+                            {
                                 continue;
                             }
                             issues.push(Issue {

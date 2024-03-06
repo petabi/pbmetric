@@ -43,7 +43,7 @@ pub fn agenda<P: AsRef<Path>>(
 ) -> Result<()> {
     out.write_all(b"<html><body>")?;
 
-    let quarter_ago = *asof - Duration::days(90);
+    let quarter_ago = *asof - Duration::try_days(90).expect("valid constant value");
     let since = match epoch {
         Some(epoch) => max(epoch, &quarter_ago),
         None => &quarter_ago,
@@ -62,7 +62,7 @@ pub fn agenda<P: AsRef<Path>>(
     }
 
     let issue_metadata = github_api.issue_metadata_since(&github_conf.repositories, since)?;
-    let week_ago = *asof - Duration::weeks(1);
+    let week_ago = *asof - Duration::try_weeks(1).expect("valid constant value");
     let github_issue_stats =
         github_api.recent_issues_per_login(&github_conf.repositories, since, &week_ago)?;
     let created_count: usize = github_issue_stats.values().map(|v| v.3).sum();
