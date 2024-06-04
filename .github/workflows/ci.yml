@@ -25,7 +25,7 @@ jobs:
       run: rustup component add clippy rustfmt
     - name: Check formatting
       if: matrix.os == 'ubuntu-latest' && matrix.rust == 'stable'
-      run: cargo fmt -- --check
+      run: cargo fmt -- --check --config group_imports=StdExternalCrate
     - name: Clippy
       if: matrix.os == 'ubuntu-latest' && matrix.rust == 'stable'
       run: cargo clippy -- -D warnings -W clippy::pedantic

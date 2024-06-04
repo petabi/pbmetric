@@ -1,14 +1,16 @@
-use crate::git::{blame_stats, Repo};
-use crate::github;
-use crate::issue::{individual_stats, IndividualStats};
-use anyhow::Result;
-use chrono::{DateTime, Duration, Utc};
-use serde::Deserialize;
 use std::cmp::{max, Ordering};
 use std::collections::{BTreeMap, HashMap};
 use std::io::Write;
 use std::path::Path;
 use std::process::exit;
+
+use anyhow::Result;
+use chrono::{DateTime, Duration, Utc};
+use serde::Deserialize;
+
+use crate::git::{blame_stats, Repo};
+use crate::github;
+use crate::issue::{individual_stats, IndividualStats};
 
 const EXCLUDE_DEFAULT: [&str; 9] = [
     r"^\.git/",

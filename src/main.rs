@@ -3,14 +3,6 @@ mod github;
 mod issue;
 mod report;
 
-use crate::report::{agenda, GithubConfig};
-use chrono::{DateTime, FixedOffset};
-use clap::{crate_version, Arg, Command};
-use directories::ProjectDirs;
-use lettre::message::SinglePart;
-use lettre::Message;
-use lettre::{transport::smtp::authentication::Credentials, SmtpTransport, Transport};
-use serde::Deserialize;
 use std::collections::BTreeMap;
 use std::env;
 use std::fs;
@@ -19,6 +11,16 @@ use std::io;
 use std::io::prelude::*;
 use std::path::{Path, PathBuf};
 use std::process::exit;
+
+use chrono::{DateTime, FixedOffset};
+use clap::{crate_version, Arg, Command};
+use directories::ProjectDirs;
+use lettre::message::SinglePart;
+use lettre::Message;
+use lettre::{transport::smtp::authentication::Credentials, SmtpTransport, Transport};
+use serde::Deserialize;
+
+use crate::report::{agenda, GithubConfig};
 
 const QUALIFIER: &str = "com";
 const ORGANIZATION: &str = "petabi";

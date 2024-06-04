@@ -1,6 +1,8 @@
-use crate::github::IssueMetadata;
-use chrono::{DateTime, Utc};
 use std::collections::{BTreeMap, HashMap};
+
+use chrono::{DateTime, Utc};
+
+use crate::github::IssueMetadata;
 
 #[derive(Debug, Default)]
 pub struct IndividualStats {
