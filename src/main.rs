@@ -139,9 +139,13 @@ fn main() {
     }
 
     let part = SinglePart::html(body);
+    let (Ok(to), Ok(from)) = (config.mail.recipient.parse(), config.mail.username.parse()) else {
+        eprintln!("cannot parse email addresses");
+        exit(1);
+    };
     let msg = Message::builder()
-        .to(config.mail.recipient.parse().unwrap())
-        .from(config.mail.username.parse().unwrap())
+        .to(to)
+        .from(from)
         .subject(format!(
             "Project Snapshot {}",
             chrono::offset::Utc::now().date_naive()
