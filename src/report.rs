@@ -41,7 +41,7 @@ pub fn agenda<P: AsRef<Path>>(
     repos: &BTreeMap<String, Repo>,
     email_map: &BTreeMap<String, String>,
     asof: &DateTime<Utc>,
-    epoch: &Option<DateTime<Utc>>,
+    epoch: Option<&DateTime<Utc>>,
 ) -> Result<()> {
     out.write_all(b"<html><body>")?;
 

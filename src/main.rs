@@ -128,7 +128,7 @@ fn main() {
         &config.repos,
         &config.email_map,
         &asof,
-        &epoch,
+        epoch.as_ref(),
     ) {
         eprintln!("cannot create an agenda: {e}");
         exit(1);
