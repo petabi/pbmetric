@@ -209,7 +209,7 @@ impl Client {
                                     if let Some(nodes) = labels.nodes {
                                         let is_bug = nodes
                                             .into_iter()
-                                            .any(|v| v.map_or(false, |v| v.name == "bug"));
+                                            .any(|v| v.is_some_and(|v| v.name == "bug"));
                                         if is_bug {
                                             stat.1 += 1;
                                         }
