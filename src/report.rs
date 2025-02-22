@@ -1,4 +1,4 @@
-use std::cmp::{max, Ordering};
+use std::cmp::{Ordering, max};
 use std::collections::{BTreeMap, HashMap};
 use std::io::Write;
 use std::path::Path;
@@ -8,9 +8,9 @@ use anyhow::Result;
 use chrono::{DateTime, Duration, Utc};
 use serde::Deserialize;
 
-use crate::git::{blame_stats, Repo};
+use crate::git::{Repo, blame_stats};
 use crate::github;
-use crate::issue::{individual_stats, IndividualStats};
+use crate::issue::{IndividualStats, individual_stats};
 
 const EXCLUDE_DEFAULT: [&str; 9] = [
     r"^\.git/",

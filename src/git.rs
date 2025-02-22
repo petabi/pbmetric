@@ -50,7 +50,7 @@ where
             return Err(io::Error::new(
                 io::ErrorKind::InvalidInput,
                 format!("invalid exclude pattern: {e}"),
-            ))
+            ));
         }
     };
 
@@ -64,7 +64,7 @@ where
                 return Err(io::Error::new(
                     io::ErrorKind::Other,
                     format!("cannot traverse repo: {e}"),
-                ))
+                ));
             }
         };
         if entry.file_type().is_dir() || entry.path_is_symlink() {
@@ -81,7 +81,7 @@ where
                 return Err(io::Error::new(
                     io::ErrorKind::InvalidData,
                     format!("invalid file name: {}", entry.path().display()),
-                ))
+                ));
             }
         };
         if exclude.is_match(pathstr) {

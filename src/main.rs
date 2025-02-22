@@ -13,14 +13,14 @@ use std::path::{Path, PathBuf};
 use std::process::exit;
 
 use chrono::{DateTime, FixedOffset};
-use clap::{crate_version, Arg, Command};
+use clap::{Arg, Command, crate_version};
 use directories::ProjectDirs;
-use lettre::message::SinglePart;
 use lettre::Message;
-use lettre::{transport::smtp::authentication::Credentials, SmtpTransport, Transport};
+use lettre::message::SinglePart;
+use lettre::{SmtpTransport, Transport, transport::smtp::authentication::Credentials};
 use serde::Deserialize;
 
-use crate::report::{agenda, GithubConfig};
+use crate::report::{GithubConfig, agenda};
 
 const QUALIFIER: &str = "com";
 const ORGANIZATION: &str = "petabi";
