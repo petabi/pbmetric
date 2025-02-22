@@ -12,6 +12,7 @@ use std::io::prelude::*;
 use std::path::{Path, PathBuf};
 use std::process::exit;
 
+use chrono::Utc;
 use chrono::{DateTime, FixedOffset};
 use clap::{Arg, Command, crate_version};
 use directories::ProjectDirs;
@@ -56,6 +57,12 @@ impl Config {
 fn main() {
     let matches = Command::new(APPLICATION)
         .version(crate_version!())
+        .arg(
+            Arg::new("config")
+                .long("config")
+                .num_args(1)
+                .help("Path to the configuration file"),
+        )
         .arg(Arg::new("asof").long("asof").num_args(1))
         .arg(Arg::new("epoch").long("epoch").num_args(1))
         .arg(
@@ -69,29 +76,26 @@ fn main() {
         eprintln!("no valid home directory path");
         exit(1);
     };
-    let config = load_config(dirs.config_dir());
+
+    let config = if let Some(custom_config) = matches.get_one::<String>("config") {
+        match Config::from_path(custom_config) {
+            Ok(cfg) => cfg,
+            Err(e) => {
+                eprintln!("cannot load config from '{custom_config}': {e}");
+                exit(1);
+            }
+        }
+    } else {
+        // Fallback to default configuration directory.
+        load_config(dirs.config_dir())
+    };
+
     let asof = matches
         .get_one::<String>("asof")
-        .map_or_else(
-            chrono::Utc::now,
-            |v| match DateTime::<FixedOffset>::parse_from_rfc3339(v) {
-                Ok(asof) => asof.with_timezone(&chrono::Utc),
-                Err(e) => {
-                    eprintln!("{e}: {v}");
-                    exit(1);
-                }
-            },
-        );
-    let epoch =
-        matches.get_one::<String>("epoch").map(
-            |v| match DateTime::<FixedOffset>::parse_from_rfc3339(v) {
-                Ok(epoch) => epoch.with_timezone(&chrono::Utc),
-                Err(e) => {
-                    eprintln!("{e}: {v}");
-                    exit(1);
-                }
-            },
-        );
+        .map_or_else(Utc::now, |arg| parse_datetime_or_exit(arg));
+    let epoch = matches
+        .get_one::<String>("epoch")
+        .map(|arg| parse_datetime_or_exit(arg));
 
     let repo_dir = match repo_dir(dirs.cache_dir()) {
         Ok(dir) => dir,
@@ -175,6 +179,18 @@ fn load_config<P: AsRef<Path>>(dir: P) -> Config {
             }
         }
     }
+}
+
+/// Parses a required datetime argument
+fn parse_datetime_or_exit(value: &str) -> DateTime<Utc> {
+    let time = match DateTime::<FixedOffset>::parse_from_rfc3339(value) {
+        Ok(time) => time,
+        Err(e) => {
+            eprintln!("cannot parse datetime: {e}");
+            exit(1);
+        }
+    };
+    time.with_timezone(&Utc)
 }
 
 fn repo_dir<P: AsRef<Path>>(cache_dir: P) -> io::Result<PathBuf> {
