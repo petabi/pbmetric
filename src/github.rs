@@ -61,9 +61,9 @@ impl Client {
     ) -> Result<Vec<Issue>> {
         let mut issues = Vec::new();
         for repo in repos {
-            let (owner, name) = repo.split_once('/').ok_or_else(|| {
-                anyhow::anyhow!("Invalid repository format: {}", repo)
-            })?;
+            let (owner, name) = repo
+                .split_once('/')
+                .ok_or_else(|| anyhow::anyhow!("Invalid repository format: {}", repo))?;
             let query = AssignedIssues::build_query(assigned_issues::Variables {
                 owner: owner.to_string(),
                 name: name.to_string(),
@@ -118,9 +118,9 @@ impl Client {
         let mut issues = Vec::new();
         let rfc3339_since = since.to_rfc3339();
         for repo in repos {
-            let (owner, name) = repo.split_once('/').ok_or_else(|| {
-                anyhow::anyhow!("Invalid repository format: {}", repo)
-            })?;
+            let (owner, name) = repo
+                .split_once('/')
+                .ok_or_else(|| anyhow::anyhow!("Invalid repository format: {}", repo))?;
             let query = RecentIssues::build_query(recent_issues::Variables {
                 owner: owner.to_string(),
                 name: name.to_string(),
@@ -187,9 +187,9 @@ impl Client {
         let mut counter = HashMap::new();
         let rfc3339_since = since.to_rfc3339();
         for repo in repos {
-            let (owner, name) = repo.split_once('/').ok_or_else(|| {
-                anyhow::anyhow!("Invalid repository format: {}", repo)
-            })?;
+            let (owner, name) = repo
+                .split_once('/')
+                .ok_or_else(|| anyhow::anyhow!("Invalid repository format: {}", repo))?;
             let query = RecentIssues::build_query(recent_issues::Variables {
                 owner: owner.to_string(),
                 name: name.to_string(),
@@ -268,9 +268,9 @@ impl Client {
     pub fn open_pull_requests(&self, repos: &[String]) -> Result<Vec<PullRequest>> {
         let mut prs = Vec::new();
         for repo in repos {
-            let (owner, name) = repo.split_once('/').ok_or_else(|| {
-                anyhow::anyhow!("Invalid repository format: {}", repo)
-            })?;
+            let (owner, name) = repo
+                .split_once('/')
+                .ok_or_else(|| anyhow::anyhow!("Invalid repository format: {}", repo))?;
             let query = OpenPullRequests::build_query(open_pull_requests::Variables {
                 owner: owner.to_string(),
                 name: name.to_string(),
@@ -331,9 +331,9 @@ impl Client {
     ) -> Result<HashMap<String, (usize, i64)>> {
         let mut prs = HashMap::new();
         for repo in repos {
-            let (owner, name) = repo.split_once('/').ok_or_else(|| {
-                anyhow::anyhow!("Invalid repository format: {}", repo)
-            })?;
+            let (owner, name) = repo
+                .split_once('/')
+                .ok_or_else(|| anyhow::anyhow!("Invalid repository format: {}", repo))?;
             let query = MergedPullRequests::build_query(merged_pull_requests::Variables {
                 owner: owner.to_string(),
                 name: name.to_string(),
