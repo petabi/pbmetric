@@ -26,7 +26,7 @@ const EXCLUDE_DEFAULT: [&str; 9] = [
 
 #[derive(Default, Deserialize)]
 pub struct GithubConfig {
-    token: String,
+    token: HashMap<String, String>,
     repositories: Vec<String>,
     account: HashMap<String, String>,
 }
@@ -53,7 +53,7 @@ pub fn agenda<P: AsRef<Path>>(
 
     let total_loc = repo_loc(repo_root.as_ref(), repos, since, asof);
 
-    let github_api = github::Client::new(&github_conf.token);
+    let github_api = github::Client::new(github_conf.token.clone());
 
     let pull_requests = github_api.open_pull_requests(&github_conf.repositories)?;
     write_pull_request_section(out, &pull_requests, &github_conf.account)?;

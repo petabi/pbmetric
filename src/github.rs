@@ -39,14 +39,14 @@ struct MergedPullRequests;
 static USER_AGENT: &str = concat!(env!("CARGO_PKG_NAME"), "/", env!("CARGO_PKG_VERSION"),);
 
 pub struct Client {
-    token: String,
+    token: HashMap<String, String>,
     inner: reqwest::blocking::Client,
 }
 
 impl Client {
-    pub fn new(token: &str) -> Self {
+    pub fn new(token: HashMap<String, String>) -> Self {
         Self {
-            token: token.to_string(),
+            token,
             inner: reqwest::blocking::ClientBuilder::new()
                 .user_agent(USER_AGENT)
                 .build()
@@ -71,7 +71,7 @@ impl Client {
             let res = self
                 .inner
                 .post("https://api.github.com/graphql")
-                .bearer_auth(&self.token)
+                .bearer_auth(&self.token[owner])
                 .json(&query)
                 .send()?;
 
@@ -129,7 +129,7 @@ impl Client {
             let res = self
                 .inner
                 .post("https://api.github.com/graphql")
-                .bearer_auth(&self.token)
+                .bearer_auth(&self.token[owner])
                 .json(&query)
                 .send()?;
 
@@ -198,7 +198,7 @@ impl Client {
             let res = self
                 .inner
                 .post("https://api.github.com/graphql")
-                .bearer_auth(&self.token)
+                .bearer_auth(&self.token[owner])
                 .json(&query)
                 .send()?;
 
@@ -278,7 +278,7 @@ impl Client {
             let res = self
                 .inner
                 .post("https://api.github.com/graphql")
-                .bearer_auth(&self.token)
+                .bearer_auth(&self.token[owner])
                 .json(&query)
                 .send()?;
 
@@ -341,7 +341,7 @@ impl Client {
             let res = self
                 .inner
                 .post("https://api.github.com/graphql")
-                .bearer_auth(&self.token)
+                .bearer_auth(&self.token[owner])
                 .json(&query)
                 .send()?;
 
