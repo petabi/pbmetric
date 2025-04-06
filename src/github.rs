@@ -227,7 +227,7 @@ impl Client {
                                     }
                                 } else {
                                     stat.0 += 1;
-                                };
+                                }
 
                                 if *recent_since < created_at {
                                     stat.3 += 1;
