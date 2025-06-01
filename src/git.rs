@@ -61,10 +61,7 @@ where
         let entry = match entry {
             Ok(entry) => entry,
             Err(e) => {
-                return Err(io::Error::new(
-                    io::ErrorKind::Other,
-                    format!("cannot traverse repo: {e}"),
-                ));
+                return Err(io::Error::other(format!("cannot traverse repo: {e}")));
             }
         };
         if entry.file_type().is_dir() || entry.path_is_symlink() {
@@ -103,7 +100,7 @@ fn blame(filename: &str) -> io::Result<String> {
         .args(["blame", "-e", "--date=iso", filename])
         .output()?;
     if !output.status.success() {
-        return Err(io::Error::new(io::ErrorKind::Other, "git operation failed"));
+        return Err(io::Error::other("git operation failed"));
     }
     let outstr = String::from_utf8_lossy(&output.stdout);
     Ok(outstr.to_string())
@@ -164,7 +161,7 @@ fn clone<P: AsRef<Path>>(url: &str, path: P) -> io::Result<()> {
     };
     let status = Command::new("git").args(["clone", url, path]).status()?;
     if !status.success() {
-        return Err(io::Error::new(io::ErrorKind::Other, "git operation failed"));
+        return Err(io::Error::other("git operation failed"));
     }
     Ok(())
 }
@@ -175,19 +172,19 @@ fn update<P: AsRef<Path>>(path: P, asof: &DateTime<Utc>, offline: bool) -> io::R
     if !offline {
         let status = Command::new("git").args(["fetch", "origin"]).status()?;
         if !status.success() {
-            return Err(io::Error::new(io::ErrorKind::Other, "git operation failed"));
+            return Err(io::Error::other("git operation failed"));
         }
     }
     let status = Command::new("git").args(["checkout", "main"]).status()?;
     if !status.success() {
-        return Err(io::Error::new(io::ErrorKind::Other, "git operation failed"));
+        return Err(io::Error::other("git operation failed"));
     }
     if !offline {
         let status = Command::new("git")
             .args(["reset", "--hard", "origin/main"])
             .status()?;
         if !status.success() {
-            return Err(io::Error::new(io::ErrorKind::Other, "git operation failed"));
+            return Err(io::Error::other("git operation failed"));
         }
     }
     let before_arg = format!(r#"--before="{}""#, asof.to_rfc3339());
@@ -199,7 +196,7 @@ fn update<P: AsRef<Path>>(path: P, asof: &DateTime<Utc>, offline: bool) -> io::R
         .args(["checkout", gitref.trim()])
         .status()?;
     if !status.success() {
-        return Err(io::Error::new(io::ErrorKind::Other, "git operation failed"));
+        return Err(io::Error::other("git operation failed"));
     }
     env::set_current_dir(orig_dir)?;
     Ok(())
