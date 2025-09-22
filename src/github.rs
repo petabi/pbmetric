@@ -63,7 +63,7 @@ impl Client {
         for repo in repos {
             let (owner, name) = repo
                 .split_once('/')
-                .ok_or_else(|| anyhow::anyhow!("Invalid repository format: {}", repo))?;
+                .ok_or_else(|| anyhow::anyhow!("Invalid repository format: {repo}"))?;
             let query = AssignedIssues::build_query(assigned_issues::Variables {
                 owner: owner.to_string(),
                 name: name.to_string(),
@@ -120,7 +120,7 @@ impl Client {
         for repo in repos {
             let (owner, name) = repo
                 .split_once('/')
-                .ok_or_else(|| anyhow::anyhow!("Invalid repository format: {}", repo))?;
+                .ok_or_else(|| anyhow::anyhow!("Invalid repository format: {repo}"))?;
             let query = RecentIssues::build_query(recent_issues::Variables {
                 owner: owner.to_string(),
                 name: name.to_string(),
@@ -189,7 +189,7 @@ impl Client {
         for repo in repos {
             let (owner, name) = repo
                 .split_once('/')
-                .ok_or_else(|| anyhow::anyhow!("Invalid repository format: {}", repo))?;
+                .ok_or_else(|| anyhow::anyhow!("Invalid repository format: {repo}"))?;
             let query = RecentIssues::build_query(recent_issues::Variables {
                 owner: owner.to_string(),
                 name: name.to_string(),
@@ -270,7 +270,7 @@ impl Client {
         for repo in repos {
             let (owner, name) = repo
                 .split_once('/')
-                .ok_or_else(|| anyhow::anyhow!("Invalid repository format: {}", repo))?;
+                .ok_or_else(|| anyhow::anyhow!("Invalid repository format: {repo}"))?;
             let query = OpenPullRequests::build_query(open_pull_requests::Variables {
                 owner: owner.to_string(),
                 name: name.to_string(),
@@ -333,7 +333,7 @@ impl Client {
         for repo in repos {
             let (owner, name) = repo
                 .split_once('/')
-                .ok_or_else(|| anyhow::anyhow!("Invalid repository format: {}", repo))?;
+                .ok_or_else(|| anyhow::anyhow!("Invalid repository format: {repo}"))?;
             let query = MergedPullRequests::build_query(merged_pull_requests::Variables {
                 owner: owner.to_string(),
                 name: name.to_string(),
