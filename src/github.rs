@@ -94,7 +94,7 @@ impl Client {
                             issues.push(Issue {
                                 title: node.title,
                                 number: node.number,
-                                repo: repo.to_string(),
+                                repo: repo.clone(),
                                 assignees: node.assignees.nodes.map_or_else(Vec::new, |nodes| {
                                     nodes
                                         .into_iter()
@@ -290,7 +290,7 @@ impl Client {
                             v.map(|node| PullRequest {
                                 title: node.title,
                                 number: node.number,
-                                repo: repo.to_string(),
+                                repo: repo.clone(),
                                 reviewers: node.review_requests.map_or(Vec::new(), |rr| {
                                     rr.edges.map_or(Vec::new(), |edges| {
                                         edges

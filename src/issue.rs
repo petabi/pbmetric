@@ -57,7 +57,7 @@ pub fn individual_stats(
             continue;
         };
         let entry = stats
-            .entry(author.to_string())
+            .entry(author.clone())
             .or_insert_with(IndividualStats::default);
         entry.merged_merge_requests_opened += count.0;
         entry.merge_request_notes += count.1 as u64;
