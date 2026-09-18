@@ -2,6 +2,7 @@ use std::collections::HashMap;
 
 use anyhow::Result;
 use graphql_client::GraphQLQuery;
+use jiff::{SignedDuration, Timestamp};
 
 type DateTime = String;
 
@@ -54,11 +55,7 @@ impl Client {
         }
     }
 
-    pub fn assigned_stale_issues(
-        &self,
-        repos: &[String],
-        asof: &chrono::DateTime<chrono::Utc>,
-    ) -> Result<Vec<Issue>> {
+    pub fn assigned_stale_issues(&self, repos: &[String], asof: &Timestamp) -> Result<Vec<Issue>> {
         let mut issues = Vec::new();
         for repo in repos {
             let (owner, name) = repo
@@ -83,12 +80,8 @@ impl Client {
                             let Some(node) = node else {
                                 continue;
                             };
-                            let updated_at =
-                                chrono::DateTime::parse_from_rfc3339(&node.updated_at)?;
-                            if updated_at
-                                > *asof
-                                    - chrono::Duration::try_days(1).expect("valid constant value")
-                            {
+                            let updated_at = node.updated_at.parse::<Timestamp>()?;
+                            if updated_at > *asof - SignedDuration::from_hours(24) {
                                 continue;
                             }
                             issues.push(Issue {
@@ -113,10 +106,10 @@ impl Client {
     pub fn issue_metadata_since(
         &self,
         repos: &[String],
-        since: &chrono::DateTime<chrono::Utc>,
+        since: &Timestamp,
     ) -> Result<Vec<IssueMetadata>> {
         let mut issues = Vec::new();
-        let rfc3339_since = since.to_rfc3339();
+        let rfc3339_since = since.to_string();
         for repo in repos {
             let (owner, name) = repo
                 .split_once('/')
@@ -141,8 +134,7 @@ impl Client {
                             let author = node
                                 .author
                                 .map_or_else(|| "unknown".to_string(), |v| v.login);
-                            let created_at =
-                                chrono::DateTime::parse_from_rfc3339(&node.created_at)?;
+                            let created_at = node.created_at.parse::<Timestamp>()?;
                             let labels = node.labels.map_or_else(Vec::new, |labels| {
                                 labels.nodes.map_or_else(Vec::new, |nodes| {
                                     nodes
@@ -152,7 +144,7 @@ impl Client {
                                 })
                             });
                             let closed_at = if let Some(closed_at) = node.closed_at {
-                                Some(chrono::DateTime::parse_from_rfc3339(&closed_at)?)
+                                Some(closed_at.parse::<Timestamp>()?)
                             } else {
                                 None
                             };
@@ -181,11 +173,11 @@ impl Client {
     pub fn recent_issues_per_login(
         &self,
         repos: &[String],
-        since: &chrono::DateTime<chrono::Utc>,
-        recent_since: &chrono::DateTime<chrono::Utc>,
+        since: &Timestamp,
+        recent_since: &Timestamp,
     ) -> Result<HashMap<String, (usize, usize, f32, usize, f32)>> {
         let mut counter = HashMap::new();
-        let rfc3339_since = since.to_rfc3339();
+        let rfc3339_since = since.to_string();
         for repo in repos {
             let (owner, name) = repo
                 .split_once('/')
@@ -207,8 +199,7 @@ impl Client {
                 if let Some(repository) = data.repository {
                     if let Some(nodes) = repository.issues.nodes {
                         for node in nodes.into_iter().flatten() {
-                            let created_at =
-                                chrono::DateTime::parse_from_rfc3339(&node.created_at)?;
+                            let created_at = node.created_at.parse::<Timestamp>()?;
                             if *since <= created_at {
                                 let author = node
                                     .author
@@ -234,7 +225,7 @@ impl Client {
                                 }
                             }
                             if let Some(closed_at) = node.closed_at {
-                                let closed_at = chrono::DateTime::parse_from_rfc3339(&closed_at)?;
+                                let closed_at = closed_at.parse::<Timestamp>()?;
                                 if let Some(nodes) = node.assignees.nodes {
                                     let mut total_assignees = 0.0;
                                     for node in &nodes {
@@ -327,7 +318,7 @@ impl Client {
     pub fn merged_pull_requests_per_login(
         &self,
         repos: &[String],
-        since: &chrono::DateTime<chrono::Utc>,
+        since: &Timestamp,
     ) -> Result<HashMap<String, (usize, i64)>> {
         let mut prs = HashMap::new();
         for repo in repos {
@@ -355,8 +346,7 @@ impl Client {
                             } else {
                                 continue;
                             };
-                            let created_at =
-                                chrono::DateTime::parse_from_rfc3339(&node.created_at)?;
+                            let created_at = node.created_at.parse::<Timestamp>()?;
                             if created_at < *since {
                                 break;
                             }
@@ -385,8 +375,8 @@ pub struct IssueMetadata {
     pub author: String,
     pub labels: Vec<String>,
     pub assignees: Vec<String>,
-    pub created_at: chrono::DateTime<chrono::offset::FixedOffset>,
-    pub closed_at: Option<chrono::DateTime<chrono::offset::FixedOffset>>,
+    pub created_at: Timestamp,
+    pub closed_at: Option<Timestamp>,
 }
 
 #[derive(Debug)]

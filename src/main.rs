@@ -12,10 +12,9 @@ use std::io::prelude::*;
 use std::path::{Path, PathBuf};
 use std::process::exit;
 
-use chrono::Utc;
-use chrono::{DateTime, FixedOffset};
 use clap::{Arg, Command, crate_version};
 use directories::ProjectDirs;
+use jiff::Timestamp;
 use lettre::Message;
 use lettre::message::SinglePart;
 use lettre::{SmtpTransport, Transport, transport::smtp::authentication::Credentials};
@@ -92,7 +91,7 @@ fn main() {
 
     let asof = matches
         .get_one::<String>("asof")
-        .map_or_else(Utc::now, |arg| parse_datetime_or_exit(arg));
+        .map_or_else(Timestamp::now, |arg| parse_datetime_or_exit(arg));
     let epoch = matches
         .get_one::<String>("epoch")
         .map(|arg| parse_datetime_or_exit(arg));
@@ -152,7 +151,7 @@ fn main() {
         .from(from)
         .subject(format!(
             "Project Snapshot {}",
-            chrono::offset::Utc::now().date_naive()
+            Timestamp::now().strftime("%Y-%m-%d")
         ))
         .singlepart(part)
         .unwrap();
@@ -182,15 +181,14 @@ fn load_config<P: AsRef<Path>>(dir: P) -> Config {
 }
 
 /// Parses a required datetime argument
-fn parse_datetime_or_exit(value: &str) -> DateTime<Utc> {
-    let time = match DateTime::<FixedOffset>::parse_from_rfc3339(value) {
+fn parse_datetime_or_exit(value: &str) -> Timestamp {
+    match value.parse() {
         Ok(time) => time,
         Err(e) => {
             eprintln!("cannot parse datetime: {e}");
             exit(1);
         }
-    };
-    time.with_timezone(&Utc)
+    }
 }
 
 fn repo_dir<P: AsRef<Path>>(cache_dir: P) -> io::Result<PathBuf> {

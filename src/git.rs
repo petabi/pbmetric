@@ -4,7 +4,7 @@ use std::io;
 use std::path::Path;
 use std::process::Command;
 
-use chrono::{DateTime, Utc};
+use jiff::Timestamp;
 use regex::RegexSet;
 use serde::Deserialize;
 use walkdir::WalkDir;
@@ -18,7 +18,7 @@ pub struct Repo {
 pub fn update_all<P: AsRef<Path>>(
     root: P,
     repos: &BTreeMap<String, Repo>,
-    asof: &DateTime<Utc>,
+    asof: &Timestamp,
     offline: bool,
 ) -> io::Result<()> {
     let mut path = root.as_ref().to_path_buf();
@@ -35,8 +35,8 @@ pub fn update_all<P: AsRef<Path>>(
 
 pub fn blame_stats<P, I, S>(
     path: P,
-    since: &DateTime<Utc>,
-    asof: &DateTime<Utc>,
+    since: &Timestamp,
+    asof: &Timestamp,
     exclude: I,
 ) -> io::Result<HashMap<String, usize>>
 where
@@ -97,7 +97,7 @@ where
 
 fn blame(filename: &str) -> io::Result<String> {
     let output = Command::new("git")
-        .args(["blame", "-e", "--date=iso", filename])
+        .args(["blame", "-e", "--date=iso-strict", filename])
         .output()?;
     if !output.status.success() {
         return Err(io::Error::other("git operation failed"));
@@ -106,7 +106,7 @@ fn blame(filename: &str) -> io::Result<String> {
     Ok(outstr.to_string())
 }
 
-fn parse_blame(blame: &str, since: &DateTime<Utc>, asof: &DateTime<Utc>) -> HashMap<String, usize> {
+fn parse_blame(blame: &str, since: &Timestamp, asof: &Timestamp) -> HashMap<String, usize> {
     let mut loc = HashMap::new();
     for line in blame.split('\n') {
         if line.is_empty() {
@@ -137,13 +137,11 @@ fn parse_blame(blame: &str, since: &DateTime<Utc>, asof: &DateTime<Utc>) -> Hash
             continue;
         };
         let timestamp_str = line[email_end + 1..timestamp_end].trim();
-        let Ok(timestamp) = DateTime::parse_from_str(timestamp_str, "%F %T %z") else {
+        let Ok(timestamp) = timestamp_str.parse::<Timestamp>() else {
             eprintln!(r#"Warning: invalid timestamp format: "{timestamp_str}""#);
             continue;
         };
-        if timestamp < since.with_timezone(&timestamp.timezone())
-            || asof.with_timezone(&timestamp.timezone()) < timestamp
-        {
+        if timestamp < *since || *asof < timestamp {
             continue;
         }
         let entry = loc.entry(email.to_string()).or_insert(0);
@@ -166,7 +164,7 @@ fn clone<P: AsRef<Path>>(url: &str, path: P) -> io::Result<()> {
     Ok(())
 }
 
-fn update<P: AsRef<Path>>(path: P, asof: &DateTime<Utc>, offline: bool) -> io::Result<()> {
+fn update<P: AsRef<Path>>(path: P, asof: &Timestamp, offline: bool) -> io::Result<()> {
     let orig_dir = env::current_dir()?;
     env::set_current_dir(path)?;
     if !offline {
@@ -187,7 +185,7 @@ fn update<P: AsRef<Path>>(path: P, asof: &DateTime<Utc>, offline: bool) -> io::R
             return Err(io::Error::other("git operation failed"));
         }
     }
-    let before_arg = format!(r#"--before="{}""#, asof.to_rfc3339());
+    let before_arg = format!(r#"--before="{asof}""#);
     let output = Command::new("git")
         .args(["rev-list", "-n", "1", "--first-parent", &before_arg, "main"])
         .output()?;

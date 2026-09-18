@@ -1,6 +1,6 @@
 use std::collections::{BTreeMap, HashMap};
 
-use chrono::{DateTime, Utc};
+use jiff::Timestamp;
 
 use crate::github::IssueMetadata;
 
@@ -19,8 +19,8 @@ pub fn individual_stats(
     issues: &[IssueMetadata],
     pull_requests: &HashMap<String, (usize, i64)>,
     account_map: &HashMap<String, String>,
-    since: &DateTime<Utc>,
-    asof: &DateTime<Utc>,
+    since: &Timestamp,
+    asof: &Timestamp,
 ) -> BTreeMap<String, IndividualStats> {
     let mut stats = BTreeMap::new();
     for issue in issues {

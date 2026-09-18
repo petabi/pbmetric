@@ -5,7 +5,7 @@ use std::path::Path;
 use std::process::exit;
 
 use anyhow::Result;
-use chrono::{DateTime, Duration, Utc};
+use jiff::{SignedDuration, Timestamp};
 use serde::Deserialize;
 
 use crate::git::{Repo, blame_stats};
@@ -40,12 +40,12 @@ pub fn agenda<P: AsRef<Path>>(
     repo_root: P,
     repos: &BTreeMap<String, Repo>,
     email_map: &BTreeMap<String, String>,
-    asof: &DateTime<Utc>,
-    epoch: Option<&DateTime<Utc>>,
+    asof: &Timestamp,
+    epoch: Option<&Timestamp>,
 ) -> Result<()> {
     out.write_all(b"<html><body>")?;
 
-    let quarter_ago = *asof - Duration::try_days(90).expect("valid constant value");
+    let quarter_ago = *asof - SignedDuration::from_hours(24 * 90);
     let since = match epoch {
         Some(epoch) => max(epoch, &quarter_ago),
         None => &quarter_ago,
@@ -64,7 +64,7 @@ pub fn agenda<P: AsRef<Path>>(
     }
 
     let issue_metadata = github_api.issue_metadata_since(&github_conf.repositories, since)?;
-    let week_ago = *asof - Duration::try_weeks(1).expect("valid constant value");
+    let week_ago = *asof - SignedDuration::from_hours(24 * 7);
     let github_issue_stats =
         github_api.recent_issues_per_login(&github_conf.repositories, since, &week_ago)?;
     let created_count: usize = github_issue_stats.values().map(|v| v.3).sum();
@@ -151,8 +151,8 @@ pub fn agenda<P: AsRef<Path>>(
 fn repo_loc(
     root: &Path,
     repos: &BTreeMap<String, Repo>,
-    start_date: &DateTime<Utc>,
-    end_date: &DateTime<Utc>,
+    start_date: &Timestamp,
+    end_date: &Timestamp,
 ) -> HashMap<String, usize> {
     let mut total_loc = HashMap::new();
     let mut path = root.to_path_buf();
@@ -241,10 +241,10 @@ fn print_individual_stat(
     out: &mut dyn Write,
     username: &str,
     stats: &IndividualStats,
-    since: &DateTime<Utc>,
-    asof: &DateTime<Utc>,
+    since: &Timestamp,
+    asof: &Timestamp,
 ) -> Result<()> {
-    let days = (*asof - *since).num_days();
+    let days = asof.duration_since(*since).as_hours() / 24;
     out.write_all(format!("<li>{username}\n<ul>\n").as_bytes())?;
     out.write_all(
         format!(
